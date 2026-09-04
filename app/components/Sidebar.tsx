@@ -1,0 +1,167 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  BookOpen,
+  ClipboardList,
+  FileStack,
+  GraduationCap,
+  ListChecks,
+  Library,
+  MessageSquare,
+  PenSquare,
+  Users,
+} from "lucide-react";
+import { useAuthStore } from "../store/useAuthStore";
+import { AUTH_APP_URL, COMMUNITY_APP_URL, LEARN_APP_URL } from "../utils/MyConstants";
+
+const INSTRUCTOR_ROLE = "instructor";
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof BookOpen;
+  match: (path: string) => boolean;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const GROUPS: NavGroup[] = [
+  {
+    title: "Manage",
+    items: [
+      { href: "/", label: "Courses", icon: BookOpen, match: (p) => p === "/" },
+      { href: "/instructors", label: "Instructors", icon: Users, match: (p) => p.startsWith("/instructors") },
+    ],
+  },
+  {
+    title: "Programs",
+    items: [
+      { href: "/enrollments", label: "Enrollments", icon: ClipboardList, match: (p) => p.startsWith("/enrollments") },
+      { href: "/cohorts", label: "Cohorts", icon: ListChecks, match: (p) => p.startsWith("/cohorts") },
+    ],
+  },
+  {
+    title: "Authoring",
+    items: [
+      { href: "/units", label: "Unit & Content", icon: FileStack, match: (p) => p.startsWith("/units") },
+      { href: "/units", label: "Assessments", icon: PenSquare, match: (p) => p.startsWith("/units") },
+    ],
+  },
+  {
+    title: "Learners",
+    items: [
+      { href: "/records", label: "Students & Records", icon: GraduationCap, match: (p) => p.startsWith("/records") },
+    ],
+  },
+];
+
+const OTHER_APPS = [
+  { label: "Community", url: COMMUNITY_APP_URL, icon: MessageSquare },
+  { label: "Learn", url: LEARN_APP_URL, icon: Library },
+  { label: "Auth / Account", url: AUTH_APP_URL, icon: Users },
+];
+
+function clearUrl(url?: string): string {
+  if (!url) return "";
+  return url.replace(/\/$/, "");
+}
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const { user, profile } = useAuthStore();
+
+  // Self-gate: only render the nav to an authenticated instructor. The AuthGate
+  // around page content already enforces the role; this mirrors it for the shell.
+  if (!user || profile?.role !== INSTRUCTOR_ROLE) return null;
+
+  const linkClasses = (item: NavItem) => {
+    const active = item.match(pathname);
+    return [
+      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+      active
+        ? "bg-[#195C49] text-white"
+        : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+    ].join(" ");
+  };
+
+  const renderLinks = () =>
+    GROUPS.map((group) => (
+      <div key={group.title} className="mb-5">
+        <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          {group.title}
+        </p>
+        <div className="space-y-0.5">
+          {group.items.map((item) => (
+            <Link key={`${group.title}-${item.label}`} href={item.href} className={linkClasses(item)}>
+              <item.icon className="size-4 shrink-0" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    ));
+
+  const renderOtherApps = () => (
+    <div className="mb-5">
+      <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+        Other apps
+      </p>
+      <div className="space-y-0.5">
+        {OTHER_APPS.map((app) => {
+          const url = clearUrl(app.url);
+          if (!url) return null;
+          return (
+            <a
+              key={app.label}
+              href={url}
+              className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            >
+              <app.icon className="size-4 shrink-0" />
+              {app.label}
+              <span className="ml-auto text-[10px] text-gray-400">↗</span>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white px-3 py-6 md:block">
+        <nav className="sticky top-6">{renderLinks()}</nav>
+        <div className="mt-6 border-t border-gray-200 pt-4">
+          {renderOtherApps()}
+        </div>
+      </aside>
+
+      {/* Mobile horizontal nav */}
+      <div className="border-b border-gray-200 bg-white md:hidden">
+        <div className="flex gap-1 overflow-x-auto px-4 py-2">
+          {GROUPS.flatMap((g) => g.items).map((item) => {
+            const active = item.match(pathname);
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={[
+                  "flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium",
+                  active ? "bg-[#195C49] text-white" : "text-gray-700 hover:bg-gray-100",
+                ].join(" ")}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
