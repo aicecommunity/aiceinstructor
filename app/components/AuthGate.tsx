@@ -6,7 +6,8 @@ import { useAuthStore } from "../store/useAuthStore";
 import { AUTH_APP_URL } from "../utils/MyConstants";
 import AccessDenied from "./AccessDenied";
 
-const INSTRUCTOR_ROLE = "instructor";
+// Only the instructor role or a Django superuser may use the instructor app.
+const INSTRUCTOR_ROLES = ["instructor"];
 
 const authTarget = AUTH_APP_URL
   ? `${AUTH_APP_URL.replace(/\/$/, "")}/?redirect=instructor`
@@ -33,7 +34,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  const isInstructor = useMemo(() => profile?.role === INSTRUCTOR_ROLE, [profile]);
+  const isInstructor = useMemo(
+    () => user?.is_superuser || (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role)),
+    [user, profile]
+  );
 
   const handleGoToAuth = () => {
     window.location.href = authTarget;
@@ -58,9 +62,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Session but not an instructor → real access-denied screen.
-  // "instructor" role doesn't exist server-side yet, so every authenticated
-  // user currently lands here. This is expected for now.
+  // Session but not the instructor role (or a superuser) → access denied.
   if (!isInstructor) {
     return (
       <div className="flex h-full flex-col">

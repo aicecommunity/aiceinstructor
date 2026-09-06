@@ -20,7 +20,6 @@ import CourseFormDialog from "./CourseFormDialog";
 import InstructorByline from "./InstructorByline";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
-import EmptyState from "../state/EmptyState";
 
 const LEVEL_LABEL: Record<string, string> = {
   beginner: "Beginner",
@@ -80,10 +79,10 @@ export default function CoursesManager() {
       </div>
 
       <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Note: the backend currently allows any authenticated user to create/edit
-        courses (IsAuthenticatedOrReadOnly). This is a known permission gap, not a
-        frontend issue. Instructor-specific write restrictions are planned backend
-        hardening.
+        Course visibility is scoped by creator: instructors only see courses
+        they created, while superusers see every course (including backend-seeded
+        ones, labeled as created by superuser). Reads/writes via
+        `IsInstructorOrSuperuserOrReadOnly`.
       </p>
 
       {isLoadingCourses ? (
@@ -99,13 +98,14 @@ export default function CoursesManager() {
               <TableHead>Level</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Active</TableHead>
+              <TableHead>Created by</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {courses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No courses yet. Create one to get started.
                 </TableCell>
               </TableRow>
@@ -135,6 +135,13 @@ export default function CoursesManager() {
                         <Badge variant="secondary">Inactive</Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {course.created_by ? (
+                        course.created_by.full_name
+                      ) : (
+                        <Badge variant="secondary">Superuser</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div
                         className="inline-flex gap-1"
@@ -161,7 +168,7 @@ export default function CoursesManager() {
                   </TableRow>
                   {expanded === course.id && (
                     <TableRow>
-                      <TableCell colSpan={6} className="bg-muted/20">
+                      <TableCell colSpan={7} className="bg-muted/20">
                         <div className="grid gap-4 py-2">
                           <p className="text-sm text-muted-foreground">
                             {course.description || "No description."}

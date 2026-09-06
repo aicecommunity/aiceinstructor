@@ -16,13 +16,14 @@ import {
 import { useAuthStore } from "../store/useAuthStore";
 import { AUTH_APP_URL, COMMUNITY_APP_URL, LEARN_APP_URL } from "../utils/MyConstants";
 
-const INSTRUCTOR_ROLE = "instructor";
+const INSTRUCTOR_ROLES = ["instructor"];
 
 interface NavItem {
   href: string;
   label: string;
   icon: typeof BookOpen;
   match: (path: string) => boolean;
+  superuserOnly?: boolean;
 }
 
 interface NavGroup {
@@ -35,7 +36,13 @@ const GROUPS: NavGroup[] = [
     title: "Manage",
     items: [
       { href: "/", label: "Courses", icon: BookOpen, match: (p) => p === "/" },
-      { href: "/instructors", label: "Instructors", icon: Users, match: (p) => p.startsWith("/instructors") },
+      {
+        href: "/instructors",
+        label: "Instructors",
+        icon: Users,
+        match: (p) => p.startsWith("/instructors"),
+        superuserOnly: true,
+      },
     ],
   },
   {
@@ -75,9 +82,11 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, profile } = useAuthStore();
 
-  // Self-gate: only render the nav to an authenticated instructor. The AuthGate
-  // around page content already enforces the role; this mirrors it for the shell.
-  if (!user || profile?.role !== INSTRUCTOR_ROLE) return null;
+  // Self-gate: only render the nav to an authorized role or a superuser. The
+  // AuthGate around page content already enforces this; this mirrors it for the
+  // shell.
+  if (!user || !(user.is_superuser || (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role))))
+    return null;
 
   const linkClasses = (item: NavItem) => {
     const active = item.match(pathname);
@@ -96,12 +105,14 @@ export default function Sidebar() {
           {group.title}
         </p>
         <div className="space-y-0.5">
-          {group.items.map((item) => (
-            <Link key={`${group.title}-${item.label}`} href={item.href} className={linkClasses(item)}>
-              <item.icon className="size-4 shrink-0" />
-              {item.label}
-            </Link>
-          ))}
+          {group.items
+            .filter((item) => !item.superuserOnly || user.is_superuser)
+            .map((item) => (
+              <Link key={`${group.title}-${item.label}`} href={item.href} className={linkClasses(item)}>
+                <item.icon className="size-4 shrink-0" />
+                {item.label}
+              </Link>
+            ))}
         </div>
       </div>
     ));
@@ -144,7 +155,9 @@ export default function Sidebar() {
       {/* Mobile horizontal nav */}
       <div className="border-b border-gray-200 bg-white md:hidden">
         <div className="flex gap-1 overflow-x-auto px-4 py-2">
-          {GROUPS.flatMap((g) => g.items).map((item) => {
+          {GROUPS.flatMap((g) => g.items)
+            .filter((item) => !item.superuserOnly || user.is_superuser)
+            .map((item) => {
             const active = item.match(pathname);
             return (
               <Link

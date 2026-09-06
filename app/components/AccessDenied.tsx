@@ -11,7 +11,7 @@ export default function AccessDenied() {
       </h1>
       <p className="mt-2 max-w-md text-zinc-600">
         This area is for instructors only. Your account does not currently have
-        the <span className="font-semibold text-zinc-900">instructor</span> role,
+        the <span className="font-semibold text-zinc-900">instructor </span> role,
         so you can&apos;t view the instructor dashboard.
       </p>
       <p className="mt-6 text-sm text-zinc-500">

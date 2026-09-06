@@ -15,6 +15,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import NotConnectedBanner from "../NotConnectedBanner";
+import LoadingState from "../state/LoadingState";
+import ErrorState from "../state/ErrorState";
+import EmptyState from "../state/EmptyState";
 import LearnerRecordsTable from "./LearnerRecordsTable";
 
 export default function RecordsScreen() {
@@ -149,14 +152,19 @@ export default function RecordsScreen() {
         </div>
       </div>
 
-      {enrollmentsError && <p className="mt-4 text-sm text-red-600">{enrollmentsError}</p>}
+      {enrollmentsError && (
+        <ErrorState className="mt-4" message={enrollmentsError} onRetry={fetchEnrollments} />
+      )}
 
-      {cohortsError && <p className="mt-4 text-sm text-red-600">{cohortsError}</p>}
+      {cohortsError && (
+        <ErrorState className="mt-4" message={cohortsError} />
+      )}
 
       {selectedEnrollmentId == null ? (
-        <p className="mt-10 rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Select an enrollment, then a cohort, to view learner records.
-        </p>
+        <EmptyState
+          className="mt-10"
+          message="Select an enrollment, then a cohort, to view learner records."
+        />
       ) : (
         <>
           <div className="mt-6">
@@ -175,9 +183,9 @@ export default function RecordsScreen() {
 
           {/* REAL aggregate progress header */}
           {isLoadingProgress ? (
-            <Skeleton className="mt-4 h-20 w-full" />
+            <LoadingState className="mt-4" rows={1} height={48} />
           ) : progressError ? (
-            <p className="mt-4 text-sm text-red-600">{progressError}</p>
+            <ErrorState className="mt-4" message={progressError} />
           ) : progress ? (
             <div className="mt-5 rounded-md border bg-muted/30 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -205,12 +213,9 @@ export default function RecordsScreen() {
 
           {/* MOCK learner roster */}
           {isLoadingRecords ? (
-            <div className="mt-5 space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
+            <LoadingState className="mt-5" rows={2} />
           ) : recordsError ? (
-            <p className="mt-5 text-sm text-red-600">{recordsError}</p>
+            <ErrorState className="mt-5" message={recordsError} />
           ) : (
             <div className="mt-5">
               <LearnerRecordsTable cohortId={selectedCohortId ?? 0} records={records} />

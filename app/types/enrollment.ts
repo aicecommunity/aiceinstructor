@@ -14,7 +14,7 @@ export interface EnrollmentCourse {
   level: CourseLevel;
   skills: string[];
   certificate_name: string;
-  instructors: { id: number; name: string; title: string; bio: string; profile_image: string | null }[];
+  instructors: { id: number; name: string; title: string; email: string | null; profile_image: string | null; profile_id: number | null; course_count: number }[];
   order: number;
   is_active: boolean;
 }

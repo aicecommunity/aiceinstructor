@@ -14,12 +14,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useInstructorStore } from "../../store/useInstructorStore";
+import { useAuthStore } from "../../store/useAuthStore";
 import type { Instructor } from "../../types/course";
 import InstructorFormDialog from "./InstructorFormDialog";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
+import AccessDenied from "../AccessDenied";
 
 export default function InstructorsManager() {
+  const { user } = useAuthStore();
+
   const {
     instructors,
     isLoadingInstructors,
@@ -35,6 +39,11 @@ export default function InstructorsManager() {
   useEffect(() => {
     fetchInstructors();
   }, [fetchInstructors]);
+
+  // The instructor-byline registry is system-wide: superusers only.
+  if (user && !user.is_superuser) {
+    return <AccessDenied />;
+  }
 
   const openCreate = () => {
     setEditing(null);
@@ -60,7 +69,7 @@ export default function InstructorsManager() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Instructors</h1>
           <p className="text-sm text-muted-foreground">
-            Course bylines (live /api/courses/instructors/).
+            All instructors in the system (live /api/courses/instructors/, superuser only).
           </p>
         </div>
         <Button onClick={openCreate}>
@@ -69,8 +78,9 @@ export default function InstructorsManager() {
       </div>
 
       <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Note: the backend currently lets any authenticated user create/edit these.
-        Profile image upload is not supported by the backend yet (read-only field).
+        Superuser-only: only the superuser sees the full instructor list and can
+        add/edit/delete instructors. Profile image upload is not supported by the
+        backend yet (read-only field).
       </p>
 
       {isLoadingInstructors ? (
@@ -82,15 +92,16 @@ export default function InstructorsManager() {
           <TableHeader>
             <TableRow>
               <TableHead>Instructor</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Courses</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Bio</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {instructors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   No instructors yet.
                 </TableCell>
               </TableRow>
@@ -106,12 +117,13 @@ export default function InstructorsManager() {
                       <span className="font-medium">{ins.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{ins.title || "—"}</TableCell>
                   <TableCell className="max-w-md whitespace-normal">
                     <span className="line-clamp-2 text-muted-foreground">
-                      {ins.bio || "—"}
+                      {ins.email || "—"}
                     </span>
                   </TableCell>
+                  <TableCell>{ins.course_count}</TableCell>
+                  <TableCell>{ins.title || "—"}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-1">
                       <Button variant="outline" size="sm" onClick={() => openEdit(ins)}>

@@ -7,13 +7,33 @@ export interface Instructor {
   id: number;
   name: string;
   title: string;
-  bio: string;
+  email: string | null;
   profile_image: string | null;
+  profile_id: number | null;
+  course_count: number;
+}
+
+// Candidate returned by the superuser-only registered-user picker
+// (GET /api/profiles/instructor-candidates/?q=...).
+export interface InstructorCandidate {
+  user_id: number;
+  full_name: string;
+  email: string;
+  username: string;
 }
 
 export interface CoursePrerequisite {
   id: number;
   prerequisite_course: string;
+}
+
+// Profile that created the course. `null` = seeded from the backend, which the
+// frontend renders as "created by superuser".
+export interface CourseCreator {
+  user_id: number;
+  full_name: string;
+  username: string;
+  role: string | null;
 }
 
 // Course as returned by CourseSerializer (all response fields).
@@ -30,6 +50,7 @@ export interface Course {
   prerequisites: CoursePrerequisite[];
   order: number;
   is_active: boolean;
+  created_by: CourseCreator | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,11 +70,10 @@ export interface CoursePayload {
   is_active: boolean;
 }
 
-// Writable Instructor fields (InstructorSerializer non-read_only).
-// NOTE: `profile_image` is a read-only SerializerMethodField (URL), so it is not
-// part of the write payload.
+// Writable Instructor fields.
+// NOTE: `name` is derived from the linked profile's full_name (read-only on the
+// backend), so the create/edit payload is `profile_id` (Profile.user_id).
 export interface InstructorPayload {
-  name: string;
+  profile_id: number | null;
   title: string;
-  bio: string;
 }

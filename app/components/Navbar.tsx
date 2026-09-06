@@ -7,7 +7,7 @@ import { AUTH_APP_URL, COMMUNITY_APP_URL, LEARN_APP_URL } from "../utils/MyConst
 const crossLinks = [
   { label: "Community", url: COMMUNITY_APP_URL },
   { label: "Learn", url: LEARN_APP_URL },
-  { label: "Auth", url: AUTH_APP_URL },
+  // { label: "Auth", url: AUTH_APP_URL },
 ];
 
 export default function Navbar() {

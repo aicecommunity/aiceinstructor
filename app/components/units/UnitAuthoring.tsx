@@ -124,7 +124,7 @@ export default function UnitAuthoring() {
       </div>
 
       {enrollmentsError && (
-        <p className="mt-3 text-sm text-red-600">{enrollmentsError}</p>
+        <ErrorState className="mt-3" message={enrollmentsError} onRetry={fetchEnrollments} />
       )}
 
       {enrollmentId == null && selectedEnrollmentId == null ? (
@@ -191,9 +191,9 @@ export default function UnitAuthoring() {
                         {unit.description && (
                           <p className="mb-3 text-sm text-muted-foreground">{unit.description}</p>
                         )}
-                        <ContentList enrollmentId={enrollmentId} unit={unit} />
+                        <ContentList enrollmentId={(enrollmentId ?? selectedEnrollmentId)!} unit={unit} />
                         <AssessmentPanel
-                          enrollmentId={enrollmentId}
+                          enrollmentId={(enrollmentId ?? selectedEnrollmentId)!}
                           courseSlug={calendar?.enrollment_slug ?? ""}
                           unit={unit}
                         />
