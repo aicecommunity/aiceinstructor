@@ -23,6 +23,7 @@ export interface InstructorProfile {
   role_display: string | null;
   role_rank: number;
   profile_picture: string | null;
+  is_instructor_byline: boolean;
 }
 
 interface AuthState {

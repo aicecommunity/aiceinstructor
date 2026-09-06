@@ -6,7 +6,10 @@ import { useAuthStore } from "../store/useAuthStore";
 import { AUTH_APP_URL } from "../utils/MyConstants";
 import AccessDenied from "./AccessDenied";
 
-// Only the instructor role or a Django superuser may use the instructor app.
+// Only the instructor role, a profile bound to an instructor byline, or a
+// Django superuser may use the instructor app. `is_instructor_byline` comes
+// from /api/profiles/me/ and is true once the user is linked via the
+// superuser-only Instructors manager.
 const INSTRUCTOR_ROLES = ["instructor"];
 
 const authTarget = AUTH_APP_URL
@@ -35,7 +38,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }, [isUserLoading, user, router]);
 
   const isInstructor = useMemo(
-    () => user?.is_superuser || (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role)),
+    () =>
+      user?.is_superuser ||
+      profile?.is_instructor_byline ||
+      (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role)),
     [user, profile]
   );
 

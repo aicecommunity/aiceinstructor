@@ -131,6 +131,11 @@ export default function InstructorFormDialog({
       title: title.trim(),
     };
 
+    if (!title.trim()) {
+      toast.error("Title is required.");
+      return;
+    }
+
     const saved = isEdit
       ? await updateInstructor(instructor!.id, payload)
       : await createInstructor(payload);
@@ -220,9 +225,10 @@ export default function InstructorFormDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="ins-title">Title</Label>
+            <Label htmlFor="ins-title">Title *</Label>
             <Input
               id="ins-title"
+              required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Founder, Director"

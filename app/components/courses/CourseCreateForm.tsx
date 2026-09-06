@@ -1,0 +1,360 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import { Check, ChevronLeft, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useCourseStore } from "../../store/useCourseStore";
+import type { CourseCertificate, CourseLevel } from "../../types/course";
+import CertificatesEditor from "./CertificatesEditor";
+
+const LEVELS: { value: CourseLevel; label: string }[] = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+];
+
+const PREFIX = "aice-";
+const MAX_SLUG_CORE = 5;
+
+interface FormState {
+  title: string;
+  slug: string;
+  description: string;
+  duration_weeks: string;
+  level: CourseLevel;
+}
+
+const emptyForm: FormState = {
+  title: "",
+  slug: "",
+  description: "",
+  duration_weeks: "",
+  level: "beginner",
+};
+
+interface FieldErrors {
+  title?: string;
+  slug?: string;
+  description?: string;
+  duration_weeks?: string;
+  certificates?: string;
+  skillsErr?: string;
+}
+
+export default function CourseCreateForm() {
+  const router = useRouter();
+  const { createCourse, isSavingCourse, courseSaveError } = useCourseStore();
+
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [certificates, setCertificates] = useState<CourseCertificate[]>([]);
+  const [certificatesValid, setCertificatesValid] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [slugState, setSlugState] = useState<
+    | { status: "idle" | "checking" | "ok" | "taken"; message?: string }
+    | undefined
+  >(undefined);
+
+  const slugTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slugSeq = useRef(0);
+
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  const slugError = (rawInput: string): string | undefined => {
+    const raw = rawInput.trim().toLowerCase();
+    const core = raw.startsWith(PREFIX) ? raw.slice(PREFIX.length) : raw;
+    if (!core) return "Slug is required.";
+    if (/\s/.test(raw) || /[^a-z0-9-]/.test(raw))
+      return "Lowercase letters, numbers and hyphens only (no spaces).";
+    if (core.length > MAX_SLUG_CORE)
+      return `Max ${MAX_SLUG_CORE} characters (the “aice-” prefix doesn’t count).`;
+    return undefined;
+  };
+
+  const slugClientError = () => slugError(form.slug);
+
+  const validateField = (
+    key: "title" | "description" | "duration_weeks"
+  ): string | undefined => {
+    const v = form[key];
+    switch (key) {
+      case "title":
+        return v.trim() ? undefined : "Title is required.";
+      case "description":
+        return v.trim() ? undefined : "Description is required.";
+      case "duration_weeks": {
+        const n = Number(v);
+        if (v === "" || v == null || Number.isNaN(n))
+          return "Duration is required.";
+        if (n < 1) return "Duration must be at least 1 week.";
+        return undefined;
+      }
+      default:
+        return undefined;
+    }
+  };
+
+  const preflightSlug = (raw: string) => {
+    if (slugTimer.current) clearTimeout(slugTimer.current);
+    const seq = ++slugSeq.current;
+    const err = slugError(raw);
+    if (err) {
+      setSlugState({ status: "idle", message: err });
+      return;
+    }
+    setSlugState({ status: "checking" });
+    slugTimer.current = setTimeout(async () => {
+      const { courses } = await import("../../services/courses");
+      try {
+        const { data } = await courses.slugAvailable(raw);
+        if (seq !== slugSeq.current) return;
+        setSlugState(
+          data.available ? { status: "ok" } : { status: "taken", message: "This slug is already taken." }
+        );
+      } catch (caught) {
+        if (seq !== slugSeq.current) return;
+        const payload = caught as {
+          response?: { data?: { error?: string } };
+        };
+        const backendMsg = payload?.response?.data?.error;
+        setSlugState(
+          backendMsg
+            ? { status: "taken", message: backendMsg }
+            : { status: "idle", message: "Could not check slug availability." }
+        );
+      }
+    }, 400);
+  };
+
+  const handleSlugChange = (value: string) => {
+    set("slug", value);
+    preflightSlug(value);
+  };
+
+  const visibleErrors: FieldErrors = {};
+  if (touched.title) {
+    const e = validateField("title");
+    if (e) visibleErrors.title = e;
+  }
+  if (touched.description) {
+    const e = validateField("description");
+    if (e) visibleErrors.description = e;
+  }
+  if (touched.duration_weeks) {
+    const e = validateField("duration_weeks");
+    if (e) visibleErrors.duration_weeks = e;
+  }
+  if (touched.slug) {
+    const se = slugClientError();
+    if (se) visibleErrors.slug = se;
+    else if (slugState?.status === "taken") visibleErrors.slug = slugState.message;
+  }
+  if (touched.certificates && certificates.length === 0)
+    visibleErrors.certificates = "Add at least one certificate.";
+  if (touched.certificates && certificates.some((c) => c.skills.length === 0))
+    visibleErrors.skillsErr = "Each certificate needs at least one skill.";
+
+  const fieldsValid =
+    !validateField("title") &&
+    !validateField("description") &&
+    !validateField("duration_weeks") &&
+    !slugClientError();
+
+  const canSubmit =
+    fieldsValid && certificatesValid && slugState?.status === "ok" && !isSavingCourse;
+
+  const recordTouched = (key: string) =>
+    setTouched((t) => (t[key] ? t : { ...t, [key]: true }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched({
+      title: true,
+      slug: true,
+      description: true,
+      duration_weeks: true,
+      certificates: true,
+      skills: true,
+    });
+    if (!canSubmit) return;
+
+    const payload = {
+      slug: form.slug.trim().toLowerCase(),
+      title: form.title.trim(),
+      description: form.description.trim(),
+      duration_weeks: Number(form.duration_weeks),
+      level: form.level,
+      certificates,
+      order: 0,
+      is_active: true,
+    };
+
+    const saved = await createCourse(payload);
+    if (saved) {
+      toast.success("Course created");
+      router.push("/");
+    }
+  };
+
+  const storedSlugCore = form.slug.trim().toLowerCase().replace(/^aice-/, "");
+  const previewSlug = PREFIX + (storedSlugCore || "___");
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+      <Link
+        href="/"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="size-4" /> Back to Courses
+      </Link>
+      <h1 className="text-2xl font-semibold tracking-tight">New course</h1>
+      <p className="text-sm text-muted-foreground">
+        Create a new course against the live /api/courses/ endpoint. All fields
+        are required.
+      </p>
+
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="mt-6 grid gap-5 rounded-xl border bg-white p-6"
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="title">Title *</Label>
+          <Input
+            id="title"
+            value={form.title}
+            onChange={(e) => set("title", e.target.value)}
+            onBlur={() => recordTouched("title")}
+            placeholder="e.g. Software Engineering Fellowship"
+            aria-invalid={Boolean(visibleErrors.title)}
+          />
+          {visibleErrors.title && (
+            <p className="text-xs text-red-600">{visibleErrors.title}</p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="slug">Slug *</Label>
+          <Input
+            id="slug"
+            value={form.slug}
+            onChange={(e) => handleSlugChange(e.target.value)}
+            onBlur={() => recordTouched("slug")}
+            placeholder="sef (1–5 chars, lowercase letters, numbers, hyphens)"
+            aria-invalid={Boolean(visibleErrors.slug)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Stored as <code>{previewSlug}</code> — the “aice-” prefix is added
+            for you and can’t be changed later.
+          </p>
+          {visibleErrors.slug && (
+            <p className="text-xs text-red-600">{visibleErrors.slug}</p>
+          )}
+          {!visibleErrors.slug && slugState?.status === "checking" && (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" /> Checking availability…
+            </p>
+          )}
+          {!visibleErrors.slug && slugState?.status === "ok" && (
+            <p className="flex items-center gap-1 text-xs text-green-600">
+              <Check className="size-3" /> Slug is available.
+            </p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="description">Description *</Label>
+          <Textarea
+            id="description"
+            rows={4}
+            value={form.description}
+            onChange={(e) => set("description", e.target.value)}
+            onBlur={() => recordTouched("description")}
+            placeholder="What the course is about"
+            aria-invalid={Boolean(visibleErrors.description)}
+          />
+          {visibleErrors.description && (
+            <p className="text-xs text-red-600">{visibleErrors.description}</p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="duration">Duration * (weeks)</Label>
+          <Input
+            id="duration"
+            type="number"
+            min={1}
+            value={form.duration_weeks}
+            onChange={(e) => set("duration_weeks", e.target.value)}
+            onBlur={() => recordTouched("duration_weeks")}
+            placeholder="e.g. 12"
+            aria-invalid={Boolean(visibleErrors.duration_weeks)}
+          />
+          {visibleErrors.duration_weeks && (
+            <p className="text-xs text-red-600">
+              {visibleErrors.duration_weeks}
+            </p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Level</Label>
+          <div className="flex gap-2">
+            {LEVELS.map((l) => (
+              <Button
+                key={l.value}
+                type="button"
+                variant={form.level === l.value ? "default" : "outline"}
+                onClick={() => set("level", l.value)}
+              >
+                {l.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <CertificatesEditor
+          value={certificates}
+          onChange={(next) => {
+            setCertificates(next);
+            recordTouched("certificates");
+            if (next.some((c) => c.skills.length === 0)) recordTouched("skills");
+          }}
+          onValidityChange={setCertificatesValid}
+        />
+        {touched.certificates &&
+          (visibleErrors.certificates || visibleErrors.skillsErr) && (
+            <p className="-mt-2 text-xs text-red-600">
+              {visibleErrors.certificates || visibleErrors.skillsErr}
+            </p>
+          )}
+
+        {courseSaveError && (
+          <p className="text-sm text-red-600">{courseSaveError}</p>
+        )}
+
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={() => router.push("/")}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!canSubmit}>
+            {isSavingCourse ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> Saving…
+              </>
+            ) : (
+              "Create course"
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

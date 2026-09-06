@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { useInstructorStore } from "../../store/useInstructorStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import type { Instructor } from "../../types/course";
 import InstructorFormDialog from "./InstructorFormDialog";
+import ConfirmDeleteInstructorDialog from "./ConfirmDeleteInstructorDialog";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
 import AccessDenied from "../AccessDenied";
@@ -29,12 +29,12 @@ export default function InstructorsManager() {
     isLoadingInstructors,
     instructorsError,
     fetchInstructors,
-    deleteInstructor,
   } = useInstructorStore();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Instructor | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<Instructor | null>(null);
 
   useEffect(() => {
     fetchInstructors();
@@ -57,10 +57,8 @@ export default function InstructorsManager() {
     setFormOpen(true);
   };
 
-  const handleDelete = async (ins: Instructor) => {
-    if (!confirm(`Delete instructor "${ins.name}"?`)) return;
-    await deleteInstructor(ins.id);
-    toast.success("Instructor deleted");
+  const handleDeleteClick = (ins: Instructor) => {
+    setDeleteTarget(ins);
   };
 
   return (
@@ -132,7 +130,7 @@ export default function InstructorsManager() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDelete(ins)}
+                        onClick={() => handleDeleteClick(ins)}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -150,6 +148,14 @@ export default function InstructorsManager() {
         open={formOpen}
         onOpenChange={setFormOpen}
         instructor={editing}
+      />
+
+      <ConfirmDeleteInstructorDialog
+        open={deleteTarget !== null}
+        onOpenChange={(next) => {
+          if (!next) setDeleteTarget(null);
+        }}
+        instructor={deleteTarget}
       />
     </div>
   );

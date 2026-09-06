@@ -1,7 +1,7 @@
 // app/services/courses.ts
 
 import { api } from "./api";
-import type { Course, CoursePayload } from "../types/course";
+import type { Course, CoursePayload, SlugAvailability } from "../types/course";
 
 export const courses = {
   list: () => api.get<Course[]>("/courses/"),
@@ -14,4 +14,9 @@ export const courses = {
     api.put<Course>(`/courses/${id}/`, data),
 
   delete: (id: number) => api.delete(`/courses/${id}/`),
+
+  slugAvailable: (slug: string) =>
+    api.get<SlugAvailability>("/courses/slug_available/", {
+      params: { slug },
+    }),
 };

@@ -82,10 +82,17 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, profile } = useAuthStore();
 
-  // Self-gate: only render the nav to an authorized role or a superuser. The
-  // AuthGate around page content already enforces this; this mirrors it for the
-  // shell.
-  if (!user || !(user.is_superuser || (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role))))
+  // Self-gate: only render the nav to an authorized role, an instructor-byline
+  // user, or a superuser. The AuthGate around page content already enforces
+  // this; this mirrors it for the shell.
+  if (
+    !user ||
+    !(
+      user.is_superuser ||
+      profile?.is_instructor_byline ||
+      (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role))
+    )
+  )
     return null;
 
   const linkClasses = (item: NavItem) => {

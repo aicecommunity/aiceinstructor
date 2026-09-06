@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Fragment } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,12 +47,6 @@ export default function CoursesManager() {
     fetchCourses();
   }, [fetchCourses]);
 
-  const openCreate = () => {
-    setEditing(null);
-    setFormKey((k) => k + 1);
-    setFormOpen(true);
-  };
-
   const openEdit = (course: Course) => {
     setEditing(course);
     setFormKey((k) => k + 1);
@@ -73,8 +68,10 @@ export default function CoursesManager() {
             Manage the AiCE curriculum (live /api/courses/).
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" /> New course
+        <Button asChild>
+          <Link href="/courses/new">
+            <Plus className="size-4" /> New course
+          </Link>
         </Button>
       </div>
 

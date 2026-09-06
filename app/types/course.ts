@@ -36,6 +36,12 @@ export interface CourseCreator {
   role: string | null;
 }
 
+// A certificate the course awards: a name plus 1–7 skills.
+export interface CourseCertificate {
+  name: string;
+  skills: string[];
+}
+
 // Course as returned by CourseSerializer (all response fields).
 export interface Course {
   id: number;
@@ -46,6 +52,7 @@ export interface Course {
   level: CourseLevel;
   skills: string[];
   certificate_name: string;
+  certificates: CourseCertificate[];
   instructors: Instructor[];
   prerequisites: CoursePrerequisite[];
   order: number;
@@ -64,10 +71,17 @@ export interface CoursePayload {
   description: string;
   duration_weeks: number;
   level: CourseLevel;
-  skills: string[];
-  certificate_name: string;
+  certificates: CourseCertificate[];
   order: number;
   is_active: boolean;
+}
+
+// Result of GET /api/courses/slug_available/?slug=...
+export interface SlugAvailability {
+  slug: string;
+  stored: string;
+  available: boolean;
+  error?: string;
 }
 
 // Writable Instructor fields.
