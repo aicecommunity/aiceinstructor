@@ -22,12 +22,6 @@ import InstructorByline from "./InstructorByline";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
 
-const LEVEL_LABEL: Record<string, string> = {
-  beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
-};
-
 export default function CoursesManager() {
   const {
     courses,
@@ -90,11 +84,10 @@ export default function CoursesManager() {
         <Table className="mt-6">
           <TableHeader>
             <TableRow>
-              <TableHead>Order</TableHead>
+              <TableHead>S/N</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Level</TableHead>
               <TableHead>Duration</TableHead>
-              <TableHead>Active</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Created by</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -102,12 +95,12 @@ export default function CoursesManager() {
           <TableBody>
             {courses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No courses yet. Create one to get started.
                 </TableCell>
               </TableRow>
             ) : (
-              courses.map((course) => (
+              courses.map((course, index) => (
                 <Fragment key={course.id}>
                   <TableRow
                     className="cursor-pointer"
@@ -115,13 +108,8 @@ export default function CoursesManager() {
                       setExpanded((e) => (e === course.id ? null : course.id))
                     }
                   >
-                    <TableCell>{course.order}</TableCell>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{course.title}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {LEVEL_LABEL[course.level] || course.level}
-                      </Badge>
-                    </TableCell>
                     <TableCell>
                       {course.duration_weeks} wk
                     </TableCell>
@@ -165,7 +153,10 @@ export default function CoursesManager() {
                   </TableRow>
                   {expanded === course.id && (
                     <TableRow>
-                      <TableCell colSpan={7} className="bg-muted/20">
+                      <TableCell
+                        colSpan={6}
+                        className="whitespace-normal break-words bg-muted/20 align-top"
+                      >
                         <div className="grid gap-4 py-2">
                           <p className="text-sm text-muted-foreground">
                             {course.description || "No description."}

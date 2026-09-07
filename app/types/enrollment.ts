@@ -2,8 +2,6 @@
 // Types mirroring the ACTUAL aicebackend enrollments/serializers.py and
 // cohorts/serializers.py output.
 
-import type { CourseLevel } from "./course";
-
 // Nested `course` inside EnrollmentSerializer (full CourseSerializer).
 export interface EnrollmentCourse {
   id: number;
@@ -11,11 +9,9 @@ export interface EnrollmentCourse {
   title: string;
   description: string;
   duration_weeks: number;
-  level: CourseLevel;
   skills: string[];
   certificate_name: string;
   instructors: { id: number; name: string; title: string; email: string | null; profile_image: string | null; profile_id: number | null; course_count: number }[];
-  order: number;
   is_active: boolean;
 }
 

@@ -1,8 +1,6 @@
 // app/types/course.ts
 // Types mirroring the ACTUAL aicebackend/courses/serializers.py output.
 
-export type CourseLevel = "beginner" | "intermediate" | "advanced";
-
 export interface Instructor {
   id: number;
   name: string;
@@ -49,13 +47,11 @@ export interface Course {
   title: string;
   description: string;
   duration_weeks: number;
-  level: CourseLevel;
   skills: string[];
   certificate_name: string;
   certificates: CourseCertificate[];
   instructors: Instructor[];
   prerequisites: CoursePrerequisite[];
-  order: number;
   is_active: boolean;
   created_by: CourseCreator | null;
   created_at: string;
@@ -70,10 +66,13 @@ export interface CoursePayload {
   title: string;
   description: string;
   duration_weeks: number;
-  level: CourseLevel;
   certificates: CourseCertificate[];
-  order: number;
   is_active: boolean;
+  // Pricing is write-only on the API and lands on the auto-created
+  // Enrollment (CourseViewSet.perform_create). Only sent on create.
+  is_paid?: boolean;
+  price?: number;
+  currency?: string;
 }
 
 // Result of GET /api/courses/slug_available/?slug=...

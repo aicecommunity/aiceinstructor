@@ -19,16 +19,9 @@ import { useCourseStore } from "../../store/useCourseStore";
 import type {
   Course,
   CourseCertificate,
-  CourseLevel,
   CoursePayload,
 } from "../../types/course";
 import CertificatesEditor from "./CertificatesEditor";
-
-const LEVELS: { value: CourseLevel; label: string }[] = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-];
 
 interface Props {
   open: boolean;
@@ -41,16 +34,14 @@ interface EditForm {
   title: string;
   description: string;
   duration_weeks: string;
-  level: CourseLevel;
 }
 
 function formFromCourse(course: Course | null | undefined): EditForm {
-  if (!course) return { title: "", description: "", duration_weeks: "", level: "beginner" };
+  if (!course) return { title: "", description: "", duration_weeks: "" };
   return {
     title: course.title ?? "",
     description: course.description ?? "",
     duration_weeks: String(course.duration_weeks ?? ""),
-    level: course.level,
   };
 }
 
@@ -100,9 +91,7 @@ export default function CourseFormDialog({
       title: form.title.trim(),
       description: form.description.trim(),
       duration_weeks: Number(form.duration_weeks),
-      level: form.level,
       certificates,
-      order: course.order,
       is_active: course.is_active,
     };
 
@@ -164,22 +153,6 @@ export default function CourseFormDialog({
               onChange={(e) => set("duration_weeks", e.target.value)}
               required
             />
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Level</Label>
-            <div className="flex gap-2">
-              {LEVELS.map((l) => (
-                <Button
-                  key={l.value}
-                  type="button"
-                  variant={form.level === l.value ? "default" : "outline"}
-                  onClick={() => set("level", l.value)}
-                >
-                  {l.label}
-                </Button>
-              ))}
-            </div>
           </div>
 
           <CertificatesEditor

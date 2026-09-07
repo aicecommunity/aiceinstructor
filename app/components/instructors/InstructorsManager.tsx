@@ -89,6 +89,7 @@ export default function InstructorsManager() {
         <Table className="mt-6">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">S/N</TableHead>
               <TableHead>Instructor</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Courses</TableHead>
@@ -99,13 +100,16 @@ export default function InstructorsManager() {
           <TableBody>
             {instructors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No instructors yet.
                 </TableCell>
               </TableRow>
             ) : (
-              instructors.map((ins) => (
+              instructors.map((ins, index) => (
                 <TableRow key={ins.id}>
+                  <TableCell className="text-sm tabular-nums text-muted-foreground">
+                    {index + 1}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>

@@ -10,24 +10,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCourseStore } from "../../store/useCourseStore";
-import type { CourseCertificate, CourseLevel } from "../../types/course";
+import { formatNaira, nairaToNumber } from "@/lib/format";
+import type { CourseCertificate } from "../../types/course";
 import CertificatesEditor from "./CertificatesEditor";
-
-const LEVELS: { value: CourseLevel; label: string }[] = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-];
 
 const PREFIX = "aice-";
 const MAX_SLUG_CORE = 5;
+const CURRENCY = "NGN";
 
 interface FormState {
   title: string;
   slug: string;
   description: string;
   duration_weeks: string;
-  level: CourseLevel;
+  is_paid: boolean;
+  price: string;
 }
 
 const emptyForm: FormState = {
@@ -35,7 +32,8 @@ const emptyForm: FormState = {
   slug: "",
   description: "",
   duration_weeks: "",
-  level: "beginner",
+  is_paid: false,
+  price: "",
 };
 
 interface FieldErrors {
@@ -43,6 +41,7 @@ interface FieldErrors {
   slug?: string;
   description?: string;
   duration_weeks?: string;
+  price?: string;
   certificates?: string;
   skillsErr?: string;
 }
@@ -81,7 +80,7 @@ export default function CourseCreateForm() {
   const slugClientError = () => slugError(form.slug);
 
   const validateField = (
-    key: "title" | "description" | "duration_weeks"
+    key: "title" | "description" | "duration_weeks" | "price"
   ): string | undefined => {
     const v = form[key];
     switch (key) {
@@ -94,6 +93,14 @@ export default function CourseCreateForm() {
         if (v === "" || v == null || Number.isNaN(n))
           return "Duration is required.";
         if (n < 1) return "Duration must be at least 1 week.";
+        return undefined;
+      }
+      case "price": {
+        if (!form.is_paid) return undefined;
+        if (v === "" || v == null) return "Price is required for a paid course.";
+        const n = Number(nairaToNumber(v));
+        if (Number.isNaN(n) || n < 0)
+          return "Price must be 0 or a positive number.";
         return undefined;
       }
       default:
@@ -151,6 +158,10 @@ export default function CourseCreateForm() {
     const e = validateField("duration_weeks");
     if (e) visibleErrors.duration_weeks = e;
   }
+  if (touched.price) {
+    const e = validateField("price");
+    if (e) visibleErrors.price = e;
+  }
   if (touched.slug) {
     const se = slugClientError();
     if (se) visibleErrors.slug = se;
@@ -165,6 +176,7 @@ export default function CourseCreateForm() {
     !validateField("title") &&
     !validateField("description") &&
     !validateField("duration_weeks") &&
+    !validateField("price") &&
     !slugClientError();
 
   const canSubmit =
@@ -180,6 +192,7 @@ export default function CourseCreateForm() {
       slug: true,
       description: true,
       duration_weeks: true,
+      price: true,
       certificates: true,
       skills: true,
     });
@@ -190,10 +203,11 @@ export default function CourseCreateForm() {
       title: form.title.trim(),
       description: form.description.trim(),
       duration_weeks: Number(form.duration_weeks),
-      level: form.level,
       certificates,
-      order: 0,
       is_active: true,
+      is_paid: form.is_paid,
+      price: form.is_paid ? Number(nairaToNumber(form.price)) : 0,
+      currency: CURRENCY,
     };
 
     const saved = await createCourse(payload);
@@ -305,20 +319,55 @@ export default function CourseCreateForm() {
         </div>
 
         <div className="grid gap-2">
-          <Label>Level</Label>
+          <Label>Pricing *</Label>
           <div className="flex gap-2">
-            {LEVELS.map((l) => (
-              <Button
-                key={l.value}
-                type="button"
-                variant={form.level === l.value ? "default" : "outline"}
-                onClick={() => set("level", l.value)}
-              >
-                {l.label}
-              </Button>
-            ))}
+            <Button
+              type="button"
+              variant={form.is_paid ? "outline" : "default"}
+              onClick={() => {
+                set("is_paid", false);
+                set("price", "");
+              }}
+            >
+              Free
+            </Button>
+            <Button
+              type="button"
+              variant={form.is_paid ? "default" : "outline"}
+              onClick={() => set("is_paid", true)}
+            >
+              Paid
+            </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Sets the price of this course’s default program (enrollment). You
+            can leave it Free for now and edit later.
+          </p>
         </div>
+
+        {form.is_paid && (
+          <div className="grid gap-2">
+            <Label htmlFor="price">Price (₦) *</Label>
+            <Input
+              id="price"
+              type="text"
+              inputMode="decimal"
+              value={formatNaira(form.price)}
+              onChange={(e) => set("price", formatNaira(e.target.value))}
+              onBlur={() => recordTouched("price")}
+              placeholder="e.g. 25,000"
+              aria-invalid={Boolean(visibleErrors.price)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown with commas for readability; saved without them.
+            </p>
+            {visibleErrors.price && (
+              <p className="text-xs text-red-600">
+                {visibleErrors.price}
+              </p>
+            )}
+          </div>
+        )}
 
         <CertificatesEditor
           value={certificates}

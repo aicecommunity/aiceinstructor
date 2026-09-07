@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/lib/format";
 import type { Enrollment } from "../../types/enrollment";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
@@ -151,7 +152,11 @@ export default function EnrollmentsManager({ onSelect, selectedId }: Props) {
                       )}
                     </TableCell>
                     <TableCell>
-                      {enrollment.currency} {enrollment.price}
+                      {enrollment.is_paid ? (
+                        formatPrice(enrollment.price, enrollment.currency)
+                      ) : (
+                        "Free"
+                      )}
                     </TableCell>
                     <TableCell>{enrollment.order ?? "—"}</TableCell>
                   </TableRow>
