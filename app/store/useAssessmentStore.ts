@@ -1,9 +1,7 @@
 // app/store/useAssessmentStore.ts
 // Zustand store for CalendarUnitAssessment / QuizQuestion / PracticalQuestion
-// authoring, scoped per unit (keyed by unit id). Currently backed ONLY by mock
-// data (lib/mock/mockApi.ts) — the real assessment endpoints are read-only and
-// learner-oriented, with no authoring endpoints. When real endpoints land, flip
-// USE_MOCK and swap the calls — components stay.
+// authoring, scoped per unit (keyed by unit id). Backed by real backend
+// authoring endpoints (app/services/assessment.ts).
 //
 // Context threading: enrollment + unit context (prompts 04/05) is passed into the
 // actions (unit carries `order`; courseSlug/enrollmentId come from the calendar)
@@ -12,6 +10,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { create } from "zustand";
+import { assessment } from "../services/assessment";
 import { mockApi } from "../../lib/mock/mockApi";
 import type { CalendarUnit } from "../types/curriculum";
 import type {
@@ -23,7 +22,7 @@ import type {
   PracticalQuestionPayload,
 } from "../types/assessment";
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 function errMsg(err: any, fallback: string): string {
   return err?.message || err?.response?.data?.detail || fallback;
@@ -109,9 +108,9 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     }));
     try {
       const [assessRes, quizRes, pracRes] = await Promise.all([
-        USE_MOCK ? mockApi.assessment.getAssessment(unitId) : Promise.resolve({ data: null }),
-        USE_MOCK ? mockApi.assessment.listQuiz(unitId) : Promise.resolve({ data: [] }),
-        USE_MOCK ? mockApi.assessment.listPractical(unitId) : Promise.resolve({ data: [] }),
+        USE_MOCK ? mockApi.assessment.getAssessment(unitId) : assessment.getAssessment(unitId),
+        USE_MOCK ? mockApi.assessment.listQuiz(unitId) : assessment.listQuiz(unitId),
+        USE_MOCK ? mockApi.assessment.listPractical(unitId) : assessment.listPractical(unitId),
       ]);
       set((s) => ({
         byUnit: {
@@ -150,7 +149,7 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.assessment.setAssessment(unitId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await assessment.setAssessment(unitId, payload);
       set((s) => ({
         byUnit: {
           ...s.byUnit,
@@ -188,6 +187,8 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       if (USE_MOCK) {
         await mockApi.assessment.deleteAssessment(unitId);
+      } else {
+        await assessment.removeAssessment(unitId);
       }
       set((s) => ({
         byUnit: {
@@ -226,7 +227,7 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.assessment.createQuiz(unitId, courseSlug, unit.order, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await assessment.createQuiz(unitId, payload);
       set((s) => {
         const sl = sliceOf(s.byUnit, unitId);
         return {
@@ -267,7 +268,7 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.assessment.updateQuiz(unitId, questionId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await assessment.updateQuiz(unitId, questionId, payload);
       set((s) => {
         const sl = sliceOf(s.byUnit, unitId);
         return {
@@ -308,6 +309,8 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       if (USE_MOCK) {
         await mockApi.assessment.deleteQuiz(unitId, questionId);
+      } else {
+        await assessment.deleteQuiz(unitId, questionId);
       }
       set((s) => {
         const sl = sliceOf(s.byUnit, unitId);
@@ -347,7 +350,7 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.assessment.createPractical(unitId, courseSlug, unit.order, enrollmentId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await assessment.createPractical(unitId, payload);
       set((s) => {
         const sl = sliceOf(s.byUnit, unitId);
         return {
@@ -388,7 +391,7 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.assessment.updatePractical(unitId, questionId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await assessment.updatePractical(unitId, questionId, payload);
       set((s) => {
         const sl = sliceOf(s.byUnit, unitId);
         return {
@@ -429,6 +432,8 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
     try {
       if (USE_MOCK) {
         await mockApi.assessment.deletePractical(unitId, questionId);
+      } else {
+        await assessment.deletePractical(unitId, questionId);
       }
       set((s) => {
         const sl = sliceOf(s.byUnit, unitId);

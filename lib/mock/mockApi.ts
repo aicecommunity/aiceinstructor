@@ -337,6 +337,7 @@ export const mockApi = {
         id: ++assessmentDbId,
         code: `${courseSlug}_prac_unit${unitOrder}_${order}`,
         practical_type: payload.practical_type,
+        expected_link_provider: payload.expected_link_provider,
         required_post_title: payload.required_post_title,
         required_post_keywords: [...payload.required_post_keywords],
         required_likes_count: payload.required_likes_count,

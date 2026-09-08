@@ -56,8 +56,12 @@ export default function AssessmentPanel({ enrollmentId, courseSlug, unit }: Prop
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editForm.assessment_type) {
+      toast.error("Please select an assessment type.");
+      return;
+    }
     const payload: AssessmentPayload = {
-      assessment_type: editForm.assessment_type,
+      assessment_type: editForm.assessment_type as AssessmentPayload["assessment_type"],
       pass_threshold_percent: Number(editForm.pass_threshold_percent),
       max_attempts: Number(editForm.max_attempts),
     };
@@ -146,7 +150,7 @@ export default function AssessmentPanel({ enrollmentId, courseSlug, unit }: Prop
                     onValueChange={(v) => setEditForm((f) => ({ ...f, assessment_type: v as AssessmentPayload["assessment_type"] }))}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue placeholder="Select an assessment type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="quiz">Quiz only</SelectItem>
@@ -213,7 +217,7 @@ export default function AssessmentPanel({ enrollmentId, courseSlug, unit }: Prop
 
 function buildForm(assessment: import("../../types/assessment").CalendarUnitAssessment | null) {
   return {
-    assessment_type: (assessment?.assessment_type ?? "quiz") as AssessmentPayload["assessment_type"],
+    assessment_type: (assessment?.assessment_type ?? "") as AssessmentPayload["assessment_type"] | "",
     pass_threshold_percent: String(assessment?.pass_threshold_percent ?? 60),
     max_attempts: String(assessment?.max_attempts ?? 1),
   };

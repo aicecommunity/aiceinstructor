@@ -56,7 +56,7 @@ const GROUPS: NavGroup[] = [
     title: "Authoring",
     items: [
       { href: "/units", label: "Unit & Content", icon: FileStack, match: (p) => p.startsWith("/units") },
-      { href: "/units", label: "Assessments", icon: PenSquare, match: (p) => p.startsWith("/units") },
+      { href: "/assessments", label: "Assessments", icon: PenSquare, match: (p) => p.startsWith("/assessments") },
     ],
   },
   {

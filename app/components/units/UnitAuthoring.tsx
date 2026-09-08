@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { Fragment } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useEnrollmentStore } from "../../store/useEnrollmentStore";
 import { useUnitStore } from "../../store/useUnitStore";
 import { useAssessmentStore } from "../../store/useAssessmentStore";
@@ -24,7 +32,8 @@ import EmptyState from "../state/EmptyState";
 import type { CalendarUnit } from "../../types/curriculum";
 import UnitFormDialog from "./UnitFormDialog";
 import ContentList from "./ContentList";
-import AssessmentPanel from "../assessment/AssessmentPanel";
+import { useAssessmentSummaries } from "../assessment/useAssessmentSummaries";
+import AssessmentStatusBadge from "../assessment/AssessmentStatusBadge";
 
 export default function UnitAuthoring() {
   const { enrollments, isLoadingEnrollments, enrollmentsError, fetchEnrollments } =
@@ -63,6 +72,9 @@ export default function UnitAuthoring() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enrollmentId, selectedEnrollmentId]);
 
+  // Warm assessment summaries so each unit row can show its status pill.
+  useAssessmentSummaries(units);
+
   const sortedUnits = [...units].sort((a, b) => a.order - b.order);
 
   const handleSelectEnrollment = async (value: string) => {
@@ -90,9 +102,10 @@ export default function UnitAuthoring() {
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Unit authoring</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Unit &amp; content authoring</h1>
           <p className="text-sm text-muted-foreground">
-            Manage the units and content for a chosen Enrollment&apos;s ProgramCalendar.
+            Manage units and their content for a chosen Enrollment&apos;s ProgramCalendar.
+            Assessments live on their own screen.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -174,16 +187,19 @@ export default function UnitAuthoring() {
                         <span className="font-medium">{unit.title}</span>
                       </button>
                       <Badge variant="outline">Unit {unit.order}</Badge>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="hidden text-xs text-muted-foreground sm:inline">
                         {unit.duration_days} days · {unit.contents.length} content
                       </span>
-                      <div className="ml-auto flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(unit)}>
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(unit)}>
-                          <Trash2 className="size-4" />
-                        </Button>
+                      <div className="ml-auto flex items-center gap-3">
+                        <AssessmentStatusBadge unitId={unit.id} />
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(unit)}>
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(unit)}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       </div>
                     </li>
                     {expanded && (
@@ -192,11 +208,16 @@ export default function UnitAuthoring() {
                           <p className="mb-3 text-sm text-muted-foreground">{unit.description}</p>
                         )}
                         <ContentList enrollmentId={(enrollmentId ?? selectedEnrollmentId)!} unit={unit} />
-                        <AssessmentPanel
-                          enrollmentId={(enrollmentId ?? selectedEnrollmentId)!}
-                          courseSlug={calendar?.enrollment_slug ?? ""}
-                          unit={unit}
-                        />
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed px-3 py-2">
+                          <p className="text-xs text-muted-foreground">
+                            Assessment for this unit is authored on the dedicated screen.
+                          </p>
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href="/assessments">
+                              Manage assessment <ExternalLink className="size-3.5" />
+                            </Link>
+                          </Button>
+                        </div>
                       </li>
                     )}
                   </Fragment>

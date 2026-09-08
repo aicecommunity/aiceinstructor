@@ -51,12 +51,10 @@ export default function ContentFormDialog({
 }: Props) {
   const { createContent, updateContent, isSavingContent, contentSaveError } = useUnitStore();
   const [form, setForm] = useState(() => ({
-    content_type: (content?.content_type ?? "video") as ContentType,
+    content_type: (content?.content_type ?? "") as "" | ContentType,
     title: content?.title ?? "",
     url: content?.url ?? "",
     description: content?.description ?? "",
-    duration_minutes: content?.duration_minutes != null ? String(content.duration_minutes) : "",
-    is_required: content ? String(content.is_required) : "false",
   }));
   const isEdit = Boolean(content);
 
@@ -65,14 +63,17 @@ export default function ContentFormDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.content_type) {
+      toast.error("Please select a content type.");
+      return;
+    }
     const payload: CalendarUnitContentPayload = {
-      content_type: form.content_type,
+      content_type: form.content_type as ContentType,
       title: form.title.trim(),
       url: form.url.trim(),
       description: form.description.trim(),
-      duration_minutes:
-        form.duration_minutes === "" ? null : Number(form.duration_minutes),
-      is_required: form.is_required === "true",
+      duration_minutes: null,
+      is_required: false,
     };
 
     const saved = isEdit
@@ -102,7 +103,7 @@ export default function ContentFormDialog({
               onValueChange={(v) => set("content_type", v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="Select a content type" />
               </SelectTrigger>
               <SelectContent>
                 {TYPES.map((t) => (
@@ -141,33 +142,6 @@ export default function ContentFormDialog({
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="content-duration">Duration (minutes)</Label>
-              <Input
-                id="content-duration"
-                type="number"
-                min={0}
-                value={form.duration_minutes}
-                onChange={(e) => set("duration_minutes", e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Required</Label>
-              <Select
-                value={form.is_required}
-                onValueChange={(v) => set("is_required", v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Yes</SelectItem>
-                  <SelectItem value="false">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {contentSaveError && (

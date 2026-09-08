@@ -1,12 +1,12 @@
 // app/store/useUnitStore.ts
 // Zustand store for CalendarUnit / CalendarUnitContent authoring, scoped to a
-// chosen enrollment's ProgramCalendar. Currently backed ONLY by mock data
-// (lib/mock/mockApi.ts) because the real curriculum endpoints are read-only.
-// When real endpoints land, flip USE_MOCK and swap the calls — components stay.
+// chosen enrollment's ProgramCalendar. Backed by real backend authoring
+// endpoints (app/services/curriculum.ts).
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { create } from "zustand";
+import { curriculum } from "../services/curriculum";
 import { mockApi } from "../../lib/mock/mockApi";
 import type {
   CalendarUnit,
@@ -16,7 +16,7 @@ import type {
   ProgramCalendar,
 } from "../types/curriculum";
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 interface UnitState {
   enrollmentId: number | null;
@@ -92,7 +92,7 @@ export const useUnitStore = create<UnitState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.curriculum.getCalendar(enrollmentId)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await curriculum.getCalendar(enrollmentId);
       set((s) => ({ ...applyCalendar(s, data), isLoadingCalendar: false }));
     } catch (err: any) {
       set({
@@ -107,7 +107,7 @@ export const useUnitStore = create<UnitState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.curriculum.createUnit(enrollmentId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await curriculum.createUnit(enrollmentId, payload);
       set((s) => {
         const calendar = s.calendar
           ? { ...s.calendar, units: [...(s.calendar.units ?? []), data] }
@@ -126,7 +126,7 @@ export const useUnitStore = create<UnitState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.curriculum.updateUnit(enrollmentId, unitId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await curriculum.updateUnit(unitId, payload);
       set((s) => {
         const calendar = s.calendar
           ? {
@@ -148,6 +148,8 @@ export const useUnitStore = create<UnitState>((set) => ({
     try {
       if (USE_MOCK) {
         await mockApi.curriculum.deleteUnit(enrollmentId, unitId);
+      } else {
+        await curriculum.deleteUnit(unitId);
       }
       set((s) => {
         const calendar = s.calendar
@@ -165,7 +167,7 @@ export const useUnitStore = create<UnitState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.curriculum.createContent(enrollmentId, unitId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await curriculum.createContent(unitId, payload);
       set((s) => {
         const calendar = s.calendar
           ? {
@@ -189,7 +191,7 @@ export const useUnitStore = create<UnitState>((set) => ({
     try {
       const { data } = USE_MOCK
         ? await mockApi.curriculum.updateContent(enrollmentId, unitId, contentId, payload)
-        : await Promise.reject(new Error("Real endpoint not implemented"));
+        : await curriculum.updateContent(unitId, contentId, payload);
       set((s) => {
         const calendar = s.calendar
           ? {
@@ -215,6 +217,8 @@ export const useUnitStore = create<UnitState>((set) => ({
     try {
       if (USE_MOCK) {
         await mockApi.curriculum.deleteContent(enrollmentId, unitId, contentId);
+      } else {
+        await curriculum.deleteContent(unitId, contentId);
       }
       set((s) => {
         const calendar = s.calendar
@@ -240,6 +244,9 @@ export const useUnitStore = create<UnitState>((set) => ({
       let contents: CalendarUnitContent[] = [];
       if (USE_MOCK) {
         const { data } = await mockApi.curriculum.moveContent(enrollmentId, unitId, contentId, direction);
+        contents = data;
+      } else {
+        const { data } = await curriculum.moveContent(unitId, contentId, direction);
         contents = data;
       }
       set((s) => {

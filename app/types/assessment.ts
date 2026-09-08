@@ -49,6 +49,13 @@ export interface QuizQuestionPayload {
 
 export type PracticalType = "github" | "post";
 
+export type ExpectedLinkProvider =
+  | ""
+  | "google_docs"
+  | "google_sheets"
+  | "google_slides"
+  | "figma";
+
 export interface PracticalRule {
   description: string;
   keyword: string;
@@ -60,6 +67,7 @@ export interface PracticalQuestion {
   id: number;
   code: string;
   practical_type: PracticalType;
+  expected_link_provider: ExpectedLinkProvider;
   required_post_title: string;
   required_post_keywords: string[];
   required_likes_count: number;
@@ -84,6 +92,7 @@ export interface PracticalQuestion {
 
 export interface PracticalQuestionPayload {
   practical_type: PracticalType;
+  expected_link_provider: ExpectedLinkProvider;
   required_post_title: string;
   required_post_keywords: string[];
   required_likes_count: number;

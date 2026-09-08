@@ -138,12 +138,16 @@ function QuizQuestionDialog({
     option_b: question?.option_b ?? "",
     option_c: question?.option_c ?? "",
     option_d: question?.option_d ?? "",
-    correct_answer: (question?.correct_answer ?? "A") as QuizAnswer,
+    correct_answer: (question?.correct_answer ?? "") as QuizAnswer | "",
     explanation: question?.explanation ?? "",
   }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.correct_answer) {
+      toast.error("Please select the correct answer.");
+      return;
+    }
     const payload: QuizQuestionPayload = {
       question_text: form.question_text.trim(),
       option_a: form.option_a.trim(),
@@ -205,7 +209,7 @@ function QuizQuestionDialog({
               onValueChange={(v) => setForm((f) => ({ ...f, correct_answer: v as QuizAnswer }))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="Select the correct answer" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="A">A</SelectItem>

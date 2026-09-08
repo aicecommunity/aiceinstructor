@@ -161,6 +161,14 @@ function PracticalQuestionDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.practical_type) {
+      toast.error("Please select a practical type.");
+      return;
+    }
+    if (form.is_active === "") {
+      toast.error("Please select whether the practical is active.");
+      return;
+    }
     let rules: PracticalRule[] = [];
     try {
       const parsed = JSON.parse(rulesText || "[]");
@@ -170,7 +178,8 @@ function PracticalQuestionDialog({
       return;
     }
     const payload: PracticalQuestionPayload = {
-      practical_type: form.practical_type,
+      practical_type: form.practical_type as PracticalType,
+      expected_link_provider: form.expected_link_provider as PracticalQuestionPayload["expected_link_provider"],
       required_post_title: form.required_post_title.trim(),
       required_post_keywords: termsText
         .split(",")
@@ -222,7 +231,7 @@ function PracticalQuestionDialog({
                 onValueChange={(v) => set("practical_type", v)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Select a practical type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="github">GitHub repository</SelectItem>
@@ -299,7 +308,7 @@ function PracticalQuestionDialog({
                 onValueChange={(v) => set("is_active", v)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Choose active or inactive" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="true">Yes</SelectItem>
@@ -324,6 +333,32 @@ function PracticalQuestionDialog({
               placeholder="python, pandas, data"
             />
           </div>
+
+          {form.practical_type === "post" && (
+            <div className="grid gap-2">
+              <Label>Linked file to grade</Label>
+              <Select
+                value={form.expected_link_provider}
+                onValueChange={(v) => set("expected_link_provider", v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="None — plain community post" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None — plain community post</SelectItem>
+                  <SelectItem value="google_docs">Google Docs</SelectItem>
+                  <SelectItem value="google_sheets">Google Sheets</SelectItem>
+                  <SelectItem value="google_slides">Google Slides</SelectItem>
+                  <SelectItem value="figma">Figma</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                When set, students attach a post containing a link to this provider and
+                the linked file&apos;s text is graded against the rules below. Plain-post
+                checks (title/keywords/likes) are skipped in this mode.
+              </p>
+            </div>
+          )}
 
           {form.practical_type === "github" && (
             <>
@@ -374,19 +409,22 @@ function PracticalQuestionDialog({
             </>
           )}
 
-          <div className="grid gap-2">
-            <Label>Rules (JSON array)</Label>
-            <Textarea
-              value={rulesText}
-              onChange={(e) => setRulesText(e.target.value)}
-              rows={4}
-              className="font-mono text-xs"
-              placeholder='[{"description":"Commit message convention","keyword":"feat:","is_required":true}]'
-            />
-            <p className="text-xs text-muted-foreground">
-              Each rule: <code>{`{ "description": string, "keyword": string, "is_required": boolean }`}</code>
-            </p>
-          </div>
+          {(form.practical_type === "github" ||
+            (form.practical_type === "post" && form.expected_link_provider)) && (
+            <div className="grid gap-2">
+              <Label>Rules (JSON array)</Label>
+              <Textarea
+                value={rulesText}
+                onChange={(e) => setRulesText(e.target.value)}
+                rows={4}
+                className="font-mono text-xs"
+                placeholder='[{"description":"Commit message convention","keyword":"feat:","is_required":true}]'
+              />
+              <p className="text-xs text-muted-foreground">
+                Each rule: <code>{`{ "description": string, "keyword": string, "is_required": boolean }`}</code>
+              </p>
+            </div>
+          )}
 
           {slice?.practicalSaveError && (
             <p className="text-sm text-red-600">{slice.practicalSaveError}</p>
@@ -408,7 +446,8 @@ function PracticalQuestionDialog({
 
 function buildForm(q: PracticalQuestion | null) {
   return {
-    practical_type: (q?.practical_type ?? "github") as PracticalType,
+    practical_type: (q?.practical_type ?? "") as PracticalType | "",
+    expected_link_provider: (q?.expected_link_provider ?? "") as PracticalQuestion["expected_link_provider"],
     task_title: q?.task_title ?? "",
     task_description: q?.task_description ?? "",
     max_score: String(q?.max_score ?? 100),
@@ -421,6 +460,6 @@ function buildForm(q: PracticalQuestion | null) {
     file_name: q?.file_name ?? "",
     branch: q?.branch ?? "main",
     starter_repo_url: q?.starter_repo_url ?? "",
-    is_active: String(q?.is_active ?? true),
+    is_active: q != null ? String(q.is_active) : "",
   };
 }
