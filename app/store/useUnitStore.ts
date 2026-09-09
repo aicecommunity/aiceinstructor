@@ -35,6 +35,9 @@ interface UnitState {
   selectEnrollment: (enrollmentId: number) => void;
   fetchCalendar: (enrollmentId: number) => Promise<void>;
 
+  clearUnitSaveError: () => void;
+  clearContentSaveError: () => void;
+
   createUnit: (enrollmentId: number, payload: CalendarUnitPayload) => Promise<CalendarUnit | null>;
   updateUnit: (enrollmentId: number, unitId: number, payload: CalendarUnitPayload) => Promise<CalendarUnit | null>;
   deleteUnit: (enrollmentId: number, unitId: number) => Promise<void>;
@@ -61,7 +64,9 @@ interface UnitState {
 }
 
 function errMsg(err: any, fallback: string): string {
-  return err?.message || err?.response?.data?.detail || fallback;
+  const data = err?.response?.data;
+  if (typeof data === "string") return data;
+  return data?.detail || err?.message || fallback;
 }
 
 function applyCalendar(state: UnitState, calendar: ProgramCalendar | null): Partial<UnitState> {
@@ -86,6 +91,9 @@ export const useUnitStore = create<UnitState>((set) => ({
   contentSaveError: null,
 
   selectEnrollment: (enrollmentId) => set({ enrollmentId }),
+
+  clearUnitSaveError: () => set({ unitSaveError: null }),
+  clearContentSaveError: () => set({ contentSaveError: null }),
 
   fetchCalendar: async (enrollmentId: number) => {
     set({ enrollmentId, isLoadingCalendar: true, calendarError: null });

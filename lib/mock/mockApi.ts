@@ -133,7 +133,7 @@ export const mockApi = {
         title: payload.title,
         description: payload.description,
         duration_days: payload.duration_days,
-        order: payload.order,
+        order: payload.order ?? Math.max(0, ...cal.units.map((u) => u.order)) + 1,
         contents: [],
       };
       cal.units.push(unit);
@@ -158,7 +158,7 @@ export const mockApi = {
       unit.title = payload.title;
       unit.description = payload.description;
       unit.duration_days = payload.duration_days;
-      unit.order = payload.order;
+      unit.order = payload.order ?? unit.order;
       cal.units.sort((a, b) => a.order - b.order);
       return { data: toUnit(unit) };
     },

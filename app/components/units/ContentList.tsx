@@ -61,51 +61,59 @@ export default function ContentList({ enrollmentId, unit }: Props) {
           {sortedContents.map((item, index) => {
             const Icon = TYPE_ICON[item.content_type];
             return (
-              <li key={item.id} className="flex items-center gap-3 px-4 py-3">
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{item.title}</span>
-                    <Badge variant="outline">{item.content_type}</Badge>
-                    {item.is_required && <Badge>Required</Badge>}
+              <li key={item.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-2 sm:items-center">
+                  <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="line-clamp-2 break-words text-sm font-medium sm:truncate sm:whitespace-nowrap">
+                        {item.title}
+                      </span>
+                    </div>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-0.5 block truncate text-xs text-muted-foreground hover:underline"
+                    >
+                      {item.url}
+                    </a>
                   </div>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="truncate text-xs text-muted-foreground hover:underline"
-                  >
-                    {item.url}
-                  </a>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {item.duration_minutes != null ? `${item.duration_minutes} min` : "—"}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={index === 0}
-                    onClick={() => handleMove(item, -1)}
-                    aria-label="Move up"
-                  >
-                    <ArrowUp className="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={index === sortedContents.length - 1}
-                    onClick={() => handleMove(item, 1)}
-                    aria-label="Move down"
-                  >
-                    <ArrowDown className="size-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(item)}>
-                    <Trash2 className="size-4" />
-                  </Button>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:ml-auto sm:shrink-0 sm:gap-x-3">
+                  <Badge variant="outline" className="shrink-0">{item.content_type}</Badge>
+                  {item.is_required && <Badge className="shrink-0">Required</Badge>}
+                  <span className="text-xs text-muted-foreground">
+                    {item.duration_minutes != null ? `${item.duration_minutes} min` : "—"}
+                  </span>
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="px-1.5"
+                      disabled={index === 0}
+                      onClick={() => handleMove(item, -1)}
+                      aria-label="Move up"
+                    >
+                      <ArrowUp className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="px-1.5"
+                      disabled={index === sortedContents.length - 1}
+                      onClick={() => handleMove(item, 1)}
+                      aria-label="Move down"
+                    >
+                      <ArrowDown className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="px-1.5" onClick={() => openEdit(item)}>
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="px-1.5" onClick={() => handleDelete(item)}>
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
               </li>
             );

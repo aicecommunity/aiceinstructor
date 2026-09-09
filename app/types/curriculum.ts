@@ -50,7 +50,7 @@ export interface CalendarUnitPayload {
   title: string;
   description: string;
   duration_days: number;
-  order: number;
+  order?: number;
 }
 
 // ProgramCalendarSerializer fields.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Dialog,
@@ -47,9 +47,18 @@ export default function UnitFormDialog({
   enrollmentId,
   unit,
 }: Props) {
-  const { createUnit, updateUnit, isSavingUnit, unitSaveError } = useUnitStore();
+  const { createUnit, updateUnit, isSavingUnit, unitSaveError, clearUnitSaveError } = useUnitStore();
   const [form, setForm] = useState<UnitForm>(() => formFromUnit(unit));
   const isEdit = Boolean(unit);
+
+  useEffect(() => {
+    clearUnitSaveError();
+    if (open) {
+      setForm(formFromUnit(unit));
+    } else {
+      setForm({ title: "", description: "", duration_days: "", order: "" });
+    }
+  }, [open, unit, clearUnitSaveError]);
 
   const set = (key: keyof UnitForm, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -60,8 +69,10 @@ export default function UnitFormDialog({
       title: form.title.trim(),
       description: form.description.trim(),
       duration_days: Number(form.duration_days) || 0,
-      order: Number(form.order) || 0,
     };
+    if (form.order.trim() !== "") {
+      payload.order = Number(form.order);
+    }
 
     const saved = isEdit
       ? await updateUnit(enrollmentId, unit!.id, payload)
@@ -95,12 +106,14 @@ export default function UnitFormDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="unit-description">Description</Label>
+            <Label htmlFor="unit-description">Description *</Label>
             <Textarea
               id="unit-description"
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
+              required
               placeholder="What this unit covers"
+              className="h-32 resize-none overflow-y-auto"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -116,16 +129,19 @@ export default function UnitFormDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="unit-order">Order *</Label>
+              <Label htmlFor="unit-order">Order (optional)</Label>
               <Input
                 id="unit-order"
                 type="number"
                 min={0}
-                required
                 value={form.order}
                 onChange={(e) => set("order", e.target.value)}
+                placeholder="e.g. 1"
               />
             </div>
+            <p className="col-start-2 -mt-2 text-xs text-muted-foreground">
+              Leave blank to auto-assign.
+            </p>
           </div>
 
           {unitSaveError && <p className="text-sm text-red-600">{unitSaveError}</p>}

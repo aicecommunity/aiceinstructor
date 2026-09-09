@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Dialog,
@@ -49,7 +49,7 @@ export default function ContentFormDialog({
   unitId,
   content,
 }: Props) {
-  const { createContent, updateContent, isSavingContent, contentSaveError } = useUnitStore();
+  const { createContent, updateContent, isSavingContent, contentSaveError, clearContentSaveError } = useUnitStore();
   const [form, setForm] = useState(() => ({
     content_type: (content?.content_type ?? "") as "" | ContentType,
     title: content?.title ?? "",
@@ -57,6 +57,18 @@ export default function ContentFormDialog({
     description: content?.description ?? "",
   }));
   const isEdit = Boolean(content);
+
+  useEffect(() => {
+    clearContentSaveError();
+    if (open) {
+      setForm({
+        content_type: (content?.content_type ?? "") as "" | ContentType,
+        title: content?.title ?? "",
+        url: content?.url ?? "",
+        description: content?.description ?? "",
+      });
+    }
+  }, [open, content, clearContentSaveError]);
 
   const set = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));

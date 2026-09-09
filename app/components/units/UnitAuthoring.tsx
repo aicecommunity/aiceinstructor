@@ -108,7 +108,7 @@ export default function UnitAuthoring() {
             Assessments live on their own screen.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <span className="text-sm text-muted-foreground">Enrollment:</span>
           {isLoadingEnrollments ? (
             <Skeleton className="h-8 w-64" />
@@ -117,7 +117,7 @@ export default function UnitAuthoring() {
               value={enrollmentId != null ? String(enrollmentId) : selectedEnrollmentId != null ? String(selectedEnrollmentId) : ""}
               onValueChange={(v) => handleSelectEnrollment(v)}
             >
-              <SelectTrigger className="w-72">
+              <SelectTrigger className="w-full min-w-0 sm:w-72 *:data-[slot=select-value]:flex-1 *:data-[slot=select-value]:min-w-0">
                 <SelectValue placeholder="Select an enrollment" />
               </SelectTrigger>
               <SelectContent>
@@ -173,30 +173,32 @@ export default function UnitAuthoring() {
                 const expanded = expandedUnit === unit.id;
                 return (
                   <Fragment key={unit.id}>
-                    <li className="flex items-center gap-3 px-4 py-3">
+                    <li className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
                       <button
                         type="button"
                         onClick={() => setExpandedUnit(expanded ? null : unit.id)}
-                        className="flex items-center gap-2 text-left"
+                        className="flex min-w-0 flex-1 items-start gap-2 text-left sm:items-center"
                       >
                         {expanded ? (
-                          <ChevronDown className="size-4 text-muted-foreground" />
+                          <ChevronDown className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                         ) : (
-                          <ChevronRight className="size-4 text-muted-foreground" />
+                          <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                         )}
-                        <span className="font-medium">{unit.title}</span>
+                        <span className="line-clamp-2 break-words font-medium sm:truncate sm:whitespace-nowrap">
+                          {unit.title}
+                        </span>
                       </button>
-                      <Badge variant="outline">Unit {unit.order}</Badge>
-                      <span className="hidden text-xs text-muted-foreground sm:inline">
-                        {unit.duration_days} days · {unit.contents.length} content
-                      </span>
-                      <div className="ml-auto flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:ml-auto sm:shrink-0 sm:gap-x-3">
+                        <Badge variant="outline" className="shrink-0">Unit {unit.order}</Badge>
+                        <span className="hidden text-xs text-muted-foreground sm:inline">
+                          {unit.duration_days} days · {unit.contents.length} content
+                        </span>
                         <AssessmentStatusBadge unitId={unit.id} />
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(unit)}>
+                        <div className="flex items-center gap-0.5 sm:gap-1">
+                          <Button variant="ghost" size="sm" className="px-1.5" onClick={() => openEdit(unit)} aria-label={`Edit ${unit.title}`}>
                             <Pencil className="size-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(unit)}>
+                          <Button variant="ghost" size="sm" className="px-1.5" onClick={() => handleDelete(unit)} aria-label={`Delete ${unit.title}`}>
                             <Trash2 className="size-4" />
                           </Button>
                         </div>

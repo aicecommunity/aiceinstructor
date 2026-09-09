@@ -154,9 +154,9 @@ export default function Sidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white px-3 py-6 md:block">
         <nav className="sticky top-6">{renderLinks()}</nav>
-        <div className="mt-6 border-t border-gray-200 pt-4">
+        {/* <div className="mt-6 border-t border-gray-200 pt-4">
           {renderOtherApps()}
-        </div>
+        </div> */}
       </aside>
 
       {/* Mobile horizontal nav */}
