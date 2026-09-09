@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FolderGit2, Plus, Pencil, PenLine, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import type {
   PracticalType,
   PracticalRule,
 } from "../../types/assessment";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 interface Props {
   enrollmentId: number;
@@ -46,14 +47,18 @@ export default function PracticalSection({ enrollmentId, courseSlug, unit }: Pro
     open: false,
     question: null,
   });
+  const [deleteTarget, setDeleteTarget] = useState<PracticalQuestion | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const openCreate = () => setDialog({ open: true, question: null });
   const openEdit = (q: PracticalQuestion) => setDialog({ open: true, question: q });
   const close = () => setDialog((d) => ({ ...d, open: false }));
 
   const handleDelete = async (q: PracticalQuestion) => {
-    if (!confirm(`Delete practical "${q.task_title}"?`)) return;
+    setDeleting(true);
     await store.deletePractical(unit, q.id);
+    setDeleting(false);
+    setDeleteTarget(null);
     toast.success("Practical deleted");
   };
 
@@ -61,11 +66,12 @@ export default function PracticalSection({ enrollmentId, courseSlug, unit }: Pro
 
   return (
     <div className="rounded-md border bg-muted/10">
-      <div className="flex items-center justify-between border-b px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <span className="text-sm font-medium">Practical questions</span>
         <Button
           size="sm"
           variant="outline"
+          className="shrink-0"
           onClick={openCreate}
           disabled={store.byUnit[unit.id]?.isSavingPractical}
         >
@@ -96,17 +102,17 @@ export default function PracticalSection({ enrollmentId, courseSlug, unit }: Pro
                 <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                   {q.task_description}
                 </p>
-                <p className="mt-1 text-xs">
-                  <span className="text-muted-foreground">Unit</span> {q.unit_order} ·{" "}
-                  <span className="text-muted-foreground">max score</span> {q.max_score} ·{" "}
-                  <code className="text-muted-foreground">{q.code}</code>
-                </p>
+                {/* <p className="mt-1 text-xs">
+                  <span className="text-muted-foreground">Unit</span> {q.unit_order} 
+                  <span className="text-muted-foreground">·{" "} max score</span> {q.max_score} ·{" "}
+                  <code className="break-all text-muted-foreground">{q.code}</code>
+                </p> */}
               </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={() => openEdit(q)}>
+              <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+                <Button variant="ghost" size="sm" className="px-1.5" onClick={() => openEdit(q)}>
                   <Pencil className="size-4" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(q)}>
+                <Button variant="ghost" size="sm" className="px-1.5" onClick={() => setDeleteTarget(q)}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>
@@ -124,6 +130,23 @@ export default function PracticalSection({ enrollmentId, courseSlug, unit }: Pro
         unit={unit}
         nextCode={nextCode}
         question={dialog.question}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title="Delete practical"
+        description={
+          deleteTarget
+            ? `Practical "${deleteTarget.task_title}" will be permanently deleted. This cannot be undone.`
+            : ""
+        }
+        loading={deleting}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
       />
     </div>
   );
@@ -152,12 +175,18 @@ function PracticalQuestionDialog({
   const isEdit = Boolean(question);
 
   const [form, setForm] = useState(() => buildForm(question));
-  const [rulesText, setRulesText] = useState(() =>
-    JSON.stringify(question?.rules ?? [], null, 2)
-  );
-  const [termsText, setTermsText] = useState(() =>
-    (question?.required_post_keywords ?? []).join(", ")
-  );
+  const [rules, setRules] = useState<PracticalRule[]>(() => question?.rules ?? []);
+  const [keywords, setKeywords] = useState<string[]>(() => question?.required_post_keywords ?? []);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(buildForm(question));
+    setRules(question?.rules ?? []);
+    setKeywords(question?.required_post_keywords ?? []);
+    store.clearPracticalError(unit.id);
+    // Only reset when the dialog (re)opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,26 +194,20 @@ function PracticalQuestionDialog({
       toast.error("Please select a practical type.");
       return;
     }
-    if (form.is_active === "") {
-      toast.error("Please select whether the practical is active.");
+    if (!form.task_description.trim()) {
+      toast.error("Task description is required.");
       return;
     }
-    let rules: PracticalRule[] = [];
-    try {
-      const parsed = JSON.parse(rulesText || "[]");
-      rules = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      toast.error("Rules must be a valid JSON array, e.g. [{\"description\":\"...\"}]");
+    const updates: Record<number, string> = {};
+    if (form.practical_type === "github" && !form.file_name.trim()) {
+      toast.error("File name is required.");
       return;
     }
     const payload: PracticalQuestionPayload = {
       practical_type: form.practical_type as PracticalType,
       expected_link_provider: form.expected_link_provider as PracticalQuestionPayload["expected_link_provider"],
       required_post_title: form.required_post_title.trim(),
-      required_post_keywords: termsText
-        .split(",")
-        .map((k) => k.trim())
-        .filter(Boolean),
+      required_post_keywords: keywords.map((k) => k.trim()).filter(Boolean),
       required_likes_count: Number(form.required_likes_count),
       required_comments_count: Number(form.required_comments_count),
       required_min_words: Number(form.required_min_words),
@@ -192,14 +215,11 @@ function PracticalQuestionDialog({
       order: question?.order ?? 0,
       task_title: form.task_title.trim(),
       task_description: form.task_description.trim(),
-      repository: form.repository.trim(),
-      directory: form.directory.trim(),
+      repository: form.repository.trim() || courseSlug,
+      directory: form.directory.trim() || `unit-${unit.order}`,
       file_name: form.file_name.trim(),
-      max_score: Number(form.max_score),
-      branch: form.branch.trim(),
-      starter_repo_url: form.starter_repo_url.trim(),
+      branch: form.branch.trim() || "main",
       rules,
-      is_active: form.is_active === "true",
     };
     const ok = isEdit
       ? await store.updatePractical(unit, question!.id, payload)
@@ -213,17 +233,30 @@ function PracticalQuestionDialog({
   const set = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  const updateRule = (index: number, patch: Partial<PracticalRule>) =>
+    setRules((rs) => rs.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  const addRule = () =>
+    setRules((rs) => [...rs, { description: "", keyword: "", is_required: true }]);
+  const removeRule = (index: number) =>
+    setRules((rs) => rs.filter((_, i) => i !== index));
+  const updateKeyword = (index: number, value: string) =>
+    setKeywords((ks) => ks.map((k, i) => (i === index ? value : k)));
+  const addKeyword = () => setKeywords((ks) => [...ks, ""]);
+  const removeKeyword = (index: number) =>
+    setKeywords((ks) => ks.filter((_, i) => i !== index));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-full overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit practical" : "Add practical"}</DialogTitle>
           <DialogDescription>
-            For unit {unit.order} · code format <code className="text-xs">{nextCode}</code>
+            For unit {unit.order} 
+            {/* · code format <code className="text-xs">{nextCode}</code> */}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Type *</Label>
               <Select
@@ -254,85 +287,96 @@ function PracticalQuestionDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Task description</Label>
+            <Label>Task description *</Label>
             <Textarea
               value={form.task_description}
               onChange={(e) => set("task_description", e.target.value)}
+              required
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="grid gap-2">
-              <Label>Max score</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.max_score}
-                onChange={(e) => set("max_score", e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Required likes</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.required_likes_count}
-                onChange={(e) => set("required_likes_count", e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Required comments</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.required_comments_count}
-                onChange={(e) => set("required_comments_count", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>Required min words</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.required_min_words}
-                onChange={(e) => set("required_min_words", e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Active</Label>
-              <Select
-                value={form.is_active}
-                onValueChange={(v) => set("is_active", v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose active or inactive" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Yes</SelectItem>
-                  <SelectItem value="false">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Required post title</Label>
-            <Input
-              value={form.required_post_title}
-              onChange={(e) => set("required_post_title", e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Required post keywords (comma separated)</Label>
-            <Input
-              value={termsText}
-              onChange={(e) => setTermsText(e.target.value)}
-              placeholder="python, pandas, data"
-            />
-          </div>
+          {form.practical_type === "post" && (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid gap-2">
+                  <Label>Required likes</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.required_likes_count}
+                    onChange={(e) => set("required_likes_count", e.target.value)}
+                    placeholder="e.g. 3"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Required comments</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.required_comments_count}
+                    onChange={(e) => set("required_comments_count", e.target.value)}
+                    placeholder="e.g. 5"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Required min words</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.required_min_words}
+                    onChange={(e) => set("required_min_words", e.target.value)}
+                    placeholder="e.g. 30"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Required post title</Label>
+                <Input
+                  value={form.required_post_title}
+                  onChange={(e) => set("required_post_title", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-3 rounded-md border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label className="text-sm font-medium">Required post keywords</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addKeyword}>
+                    <Plus className="size-4" />
+                    Add keyword
+                  </Button>
+                </div>
+                {keywords.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No keywords yet — click “Add keyword” to create one.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {keywords.map((kw, index) => (
+                      <div
+                        key={index}
+                        className="grid grid-cols-[1fr_auto] items-center gap-2"
+                      >
+                        <Input
+                          value={kw}
+                          onChange={(e) => updateKeyword(index, e.target.value)}
+                          placeholder={`Keyword ${index + 1}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="px-1.5 text-muted-foreground"
+                          onClick={() => removeKeyword(index)}
+                          aria-label={`Remove keyword ${index + 1}`}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {form.practical_type === "post" && (
             <div className="grid gap-2">
@@ -362,7 +406,7 @@ function PracticalQuestionDialog({
 
           {form.practical_type === "github" && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Repository</Label>
                   <Input
@@ -380,12 +424,13 @@ function PracticalQuestionDialog({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>File name</Label>
+                  <Label>File name *</Label>
                   <Input
                     value={form.file_name}
                     onChange={(e) => set("file_name", e.target.value)}
+                    required
                   />
                 </div>
                 <div className="grid gap-2">
@@ -397,32 +442,82 @@ function PracticalQuestionDialog({
                   />
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Starter repo URL</Label>
-                <Input
-                  type="url"
-                  value={form.starter_repo_url}
-                  onChange={(e) => set("starter_repo_url", e.target.value)}
-                  placeholder="https://github.com/..."
-                />
-              </div>
+              <p className="text-xs text-muted-foreground">
+                If left blank, <strong>Repository</strong> defaults to the course slug ("{courseSlug}"),{" "}
+                <strong>Directory</strong> defaults to <code>unit-{unit.order}</code>, and{" "}
+                <strong>Branch</strong> defaults to <code>main</code>.
+              </p>
             </>
           )}
 
           {(form.practical_type === "github" ||
             (form.practical_type === "post" && form.expected_link_provider)) && (
-            <div className="grid gap-2">
-              <Label>Rules (JSON array)</Label>
-              <Textarea
-                value={rulesText}
-                onChange={(e) => setRulesText(e.target.value)}
-                rows={4}
-                className="font-mono text-xs"
-                placeholder='[{"description":"Commit message convention","keyword":"feat:","is_required":true}]'
-              />
+            <div className="grid gap-3 rounded-md border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label className="text-sm font-medium">Rules</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addRule}>
+                  <Plus className="size-4" />
+                  Add rule
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Each rule: <code>{`{ "description": string, "keyword": string, "is_required": boolean }`}</code>
+                Rules are checked against the submitted work. Each rule has a
+                description, a keyword to look for, and whether a match is required.
               </p>
+              {rules.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No rules yet — click “Add rule” to create one.
+                </p>
+              ) : (
+                rules.map((rule, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 gap-3 rounded-md border bg-muted/20 p-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end"
+                  >
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs">Description</Label>
+                      <Input
+                        value={rule.description}
+                        onChange={(e) => updateRule(index, { description: e.target.value })}
+                        placeholder={`e.g. Commit message convention`}
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs">Keyword</Label>
+                      <Input
+                        value={rule.keyword}
+                        onChange={(e) => updateRule(index, { keyword: e.target.value })}
+                        placeholder="e.g. feat:"
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs">Required</Label>
+                      <Select
+                        value={String(rule.is_required)}
+                        onValueChange={(v) => updateRule(index, { is_required: v === "true" })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Yes</SelectItem>
+                          <SelectItem value="false">No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="px-1.5 text-muted-foreground"
+                      onClick={() => removeRule(index)}
+                      aria-label={`Remove rule ${index + 1}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
@@ -450,16 +545,13 @@ function buildForm(q: PracticalQuestion | null) {
     expected_link_provider: (q?.expected_link_provider ?? "") as PracticalQuestion["expected_link_provider"],
     task_title: q?.task_title ?? "",
     task_description: q?.task_description ?? "",
-    max_score: String(q?.max_score ?? 100),
-    required_likes_count: String(q?.required_likes_count ?? 0),
-    required_comments_count: String(q?.required_comments_count ?? 0),
-    required_min_words: String(q?.required_min_words ?? 0),
+    required_likes_count: String(q?.required_likes_count ?? ""),
+    required_comments_count: String(q?.required_comments_count ?? ""),
+    required_min_words: String(q?.required_min_words ?? ""),
     required_post_title: q?.required_post_title ?? "",
     repository: q?.repository ?? "",
     directory: q?.directory ?? "",
     file_name: q?.file_name ?? "",
-    branch: q?.branch ?? "main",
-    starter_repo_url: q?.starter_repo_url ?? "",
-    is_active: q != null ? String(q.is_active) : "",
+    branch: q?.branch ?? "",
   };
 }

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUnitStore } from "../../store/useUnitStore";
 import type { CalendarUnit, CalendarUnitContent } from "../../types/curriculum";
 import ContentFormDialog from "./ContentFormDialog";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 const TYPE_ICON: Record<CalendarUnitContent["content_type"], LucideIcon> = {
   video: Play,
@@ -26,6 +27,8 @@ export default function ContentList({ enrollmentId, unit }: Props) {
     open: false,
     content: null,
   });
+  const [deleteTarget, setDeleteTarget] = useState<CalendarUnitContent | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const sortedContents = [...unit.contents].sort((a, b) => a.order - b.order);
 
@@ -34,8 +37,10 @@ export default function ContentList({ enrollmentId, unit }: Props) {
   const close = () => setDialog((d) => ({ ...d, open: false }));
 
   const handleDelete = async (content: CalendarUnitContent) => {
-    if (!confirm(`Delete content "${content.title}"?`)) return;
+    setDeleting(true);
     await deleteContent(enrollmentId, unit.id, content.id);
+    setDeleting(false);
+    setDeleteTarget(null);
     toast.success("Content deleted");
   };
 
@@ -110,7 +115,7 @@ export default function ContentList({ enrollmentId, unit }: Props) {
                     <Button variant="ghost" size="sm" className="px-1.5" onClick={() => openEdit(item)}>
                       <Pencil className="size-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="px-1.5" onClick={() => handleDelete(item)}>
+                    <Button variant="ghost" size="sm" className="px-1.5" onClick={() => setDeleteTarget(item)}>
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
@@ -128,6 +133,23 @@ export default function ContentList({ enrollmentId, unit }: Props) {
         enrollmentId={enrollmentId}
         unitId={unit.id}
         content={dialog.content}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title="Delete content"
+        description={
+          deleteTarget
+            ? `Content "${deleteTarget.title}" will be permanently deleted. This cannot be undone.`
+            : ""
+        }
+        loading={deleting}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
       />
     </div>
   );

@@ -34,6 +34,7 @@ export default function AssessmentStatusBadge({ unitId }: { unitId: number }) {
   return (
     <Badge
       variant="secondary"
+      className="max-w-full whitespace-normal text-left"
       title={`Pass ≥ ${assessment.pass_threshold_percent}% · ${assessment.max_attempts} attempt(s)`}
     >
       {label} · {quizQuestions.length} quiz · {practicalQuestions.length} practical

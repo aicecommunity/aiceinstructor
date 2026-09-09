@@ -21,6 +21,7 @@ import CourseFormDialog from "./CourseFormDialog";
 import InstructorByline from "./InstructorByline";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 export default function CoursesManager() {
   const {
@@ -36,6 +37,7 @@ export default function CoursesManager() {
   const [editing, setEditing] = useState<Course | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
 
   useEffect(() => {
     fetchCourses();
@@ -48,8 +50,8 @@ export default function CoursesManager() {
   };
 
   const handleDelete = async (course: Course) => {
-    if (!confirm(`Delete course "${course.title}"?`)) return;
     await deleteCourse(course.id);
+    setDeleteTarget(null);
     toast.success("Course deleted");
   };
 
@@ -144,7 +146,7 @@ export default function CoursesManager() {
                           variant="destructive"
                           size="sm"
                           disabled={isDeletingCourse}
-                          onClick={() => handleDelete(course)}
+                          onClick={() => setDeleteTarget(course)}
                         >
                           <Trash2 className="size-4" />
                         </Button>
@@ -180,6 +182,23 @@ export default function CoursesManager() {
         course={editing}
         onSaved={() => {
           setExpanded(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title="Delete course"
+        description={
+          deleteTarget
+            ? `Course "${deleteTarget.title}" will be permanently deleted. This cannot be undone.`
+            : ""
+        }
+        loading={isDeletingCourse}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
         }}
       />
     </div>

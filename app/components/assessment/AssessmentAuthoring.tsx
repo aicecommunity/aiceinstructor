@@ -80,7 +80,7 @@ export default function AssessmentAuthoring() {
             Configure assessments and author quiz / practical questions per unit.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <span className="text-sm text-muted-foreground">Enrollment:</span>
           {isLoadingEnrollments ? (
             <Skeleton className="h-8 w-64" />
@@ -89,7 +89,7 @@ export default function AssessmentAuthoring() {
               value={enrollmentId != null ? String(enrollmentId) : selectedEnrollmentId != null ? String(selectedEnrollmentId) : ""}
               onValueChange={handleSelectEnrollment}
             >
-              <SelectTrigger className="w-72">
+              <SelectTrigger className="w-full min-w-0 sm:w-72 *:data-[slot=select-value]:flex-1 *:data-[slot=select-value]:min-w-0">
                 <SelectValue placeholder="Select an enrollment" />
               </SelectTrigger>
               <SelectContent>
@@ -145,7 +145,7 @@ export default function AssessmentAuthoring() {
           ) : (
             <div className="mt-4 grid items-start gap-4 lg:grid-cols-[300px_1fr]">
               {/* Units picker */}
-              <nav className="rounded-md border bg-background">
+              <nav className="min-w-0 rounded-md border bg-background">
                 <p className="border-b px-4 py-2 text-sm font-medium">Units</p>
                 {sortedUnits.length === 0 ? (
                   <p className="px-4 py-4 text-sm text-muted-foreground">No units yet.</p>
@@ -175,6 +175,21 @@ export default function AssessmentAuthoring() {
                             </span>
                             <ChevronRight className={`size-4 shrink-0 ${active ? "text-white/70" : "text-muted-foreground"}`} />
                           </button>
+                          {active && (
+                            <div className="border-t lg:hidden">
+                              <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/20 px-4 py-3">
+                                <p className="min-w-0 flex-1 break-words text-sm font-medium">
+                                  Unit {unit.order} · {unit.title}
+                                </p>
+                                <AssessmentStatusBadge unitId={unit.id} />
+                              </div>
+                              <AssessmentPanel
+                                enrollmentId={enrollmentId ?? selectedEnrollmentId!}
+                                courseSlug={calendar?.enrollment_slug ?? ""}
+                                unit={unit}
+                              />
+                            </div>
+                          )}
                         </li>
                       );
                     })}
@@ -182,36 +197,38 @@ export default function AssessmentAuthoring() {
                 )}
               </nav>
 
-              {/* Editor */}
-              {!selectedUnit ? (
-                <EmptyState
-                  className="lg:min-h-[300px]"
-                  message="Select a unit on the left to author its assessment."
-                />
-              ) : (
-                <div className="rounded-md border bg-background">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <SlidersHorizontal className="size-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">
-                          Unit {selectedUnit.order} · {selectedUnit.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Assessment settings, quiz questions, and practical questions
-                        </p>
-                      </div>
-                    </div>
-                    <AssessmentStatusBadge unitId={selectedUnit.id} />
-                  </div>
-                  <AssessmentPanel
-                    key={selectedUnit.id}
-                    enrollmentId={enrollmentId ?? selectedEnrollmentId!}
-                    courseSlug={calendar?.enrollment_slug ?? ""}
-                    unit={selectedUnit}
+              {/* Editor (desktop split view only; mobile expands under the unit) */}
+              <div className="hidden lg:block">
+                {!selectedUnit ? (
+                  <EmptyState
+                    className="lg:min-h-[300px]"
+                    message="Select a unit on the left to author its assessment."
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="rounded-md border bg-background">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <SlidersHorizontal className="size-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">
+                            Unit {selectedUnit.order} · {selectedUnit.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Assessment settings, quiz questions, and practical questions
+                          </p>
+                        </div>
+                      </div>
+                      <AssessmentStatusBadge unitId={selectedUnit.id} />
+                    </div>
+                    <AssessmentPanel
+                      key={selectedUnit.id}
+                      enrollmentId={enrollmentId ?? selectedEnrollmentId!}
+                      courseSlug={calendar?.enrollment_slug ?? ""}
+                      unit={selectedUnit}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

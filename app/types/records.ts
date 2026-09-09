@@ -88,6 +88,14 @@ export interface LearnerRecord {
   practical_submissions: PracticalSubmission[];
 }
 
+// GET /api/cohorts/{cohort_id}/records/ (cohorts.views.CohortRecordsView) —
+// instructor-scoped aggregate of the learner roster + per-learner records.
+export interface CohortRecords {
+  cohort_id: number;
+  cohort_name: string;
+  records: LearnerRecord[];
+}
+
 // GET /api/cohorts/{cohort_id}/progress/ (cohorts/views.py:204 CohortProgressView).
 export interface CohortProgress {
   cohort_id: number;
@@ -106,6 +114,8 @@ export interface CohortProgress {
 // PROPOSED write payload for "instructor override score + feedback". No such
 // endpoint exists today (verified) — this is the shape the backend should accept
 // when it implements instructor grading override. The UI is a proposal only.
+// PUT/PATCH /api/assessment/submissions/{id}/ (PracticalSubmissionView) —
+// instructor grade override. `reason` is appended to the stored feedback.
 export interface GradingOverridePayload {
   submission_id: number;
   score: number;

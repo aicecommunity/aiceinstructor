@@ -1,14 +1,11 @@
 // app/store/useStudentsStore.ts
 // Zustand store for the learners/records + submission-review screen.
 //
-// Hybrid by design (mirrors what is genuinely readable vs what must be mocked):
-//  - REAL: cohort aggregate progress via GET /api/cohorts/{id}/progress/
-//    (CohortProgressView — the only instructor-viewable aggregate read today).
-//  - MOCK: the per-learner roster + completion/quiz/practical status and the
-//    submission-review payloads + instructor override. No instructor-scoped
-//    aggregate read or write exists (every assessment endpoint is learner-"me"-
-//    scoped), and the real cohort-members endpoint returns empty (role="student"
-//    never matches Profile.role). So USE_MOCK covers those.
+// All data now comes from the real backend:
+//  - GET  /api/cohorts/{id}/progress/          aggregate cohort progress
+//  - GET  /api/cohorts/{id}/records/           roster + per-learner records
+//  - GET  /api/assessment/submissions/{id}/    single submission review
+//  - PATCH /api/assessment/submissions/{id}/   instructor grade override
 //
 // State is keyed per cohort id. Only aiceinstructor/ is touched.
 
@@ -16,10 +13,8 @@
 
 import { create } from "zustand";
 import { cohorts as cohortsService } from "../services/cohorts";
-import { mockApi } from "../../lib/mock/mockApi";
+import { students as studentsService } from "../services/students";
 import type { CohortProgress, LearnerRecord, PracticalSubmission, GradingOverridePayload } from "../types/records";
-
-const USE_MOCK_RECORDS = true;
 
 function errMsg(err: any, fallback: string): string {
   return err?.message || err?.response?.data?.detail || fallback;
@@ -38,12 +33,10 @@ interface CohortRecordsState {
   progressError: string | null;
   isLoadingProgress: boolean;
 
-  // MOCK data per cohort
   records: LearnerRecord[];
   recordsError: string | null;
   isLoadingRecords: boolean;
 
-  // MOCK submission review (+ override, proposal only)
   isOverriding: boolean;
   overrideError: string | null;
 
@@ -82,7 +75,6 @@ export const useStudentsStore = create<CohortRecordsState>((set) => ({
   fetchProgress: async (cohortId) => {
     set({ isLoadingProgress: true, progressError: null });
     try {
-      // REAL endpoint.
       const { data } = await cohortsService.progress(cohortId);
       set({ progress: data, isLoadingProgress: false });
     } catch (err: any) {
@@ -96,12 +88,8 @@ export const useStudentsStore = create<CohortRecordsState>((set) => ({
   fetchRecords: async (ctx) => {
     set({ isLoadingRecords: true, recordsError: null });
     try {
-      if (!USE_MOCK_RECORDS) {
-        set({ recordsError: "No instructor records endpoint implemented.", isLoadingRecords: false });
-        return;
-      }
-      const { data } = await mockApi.students.listRecords(ctx);
-      set({ records: data, isLoadingRecords: false });
+      const { data } = await studentsService.records(ctx.cohortId);
+      set({ records: data.records, isLoadingRecords: false });
     } catch (err: any) {
       set({
         recordsError: errMsg(err, "Failed to load learner records"),
@@ -110,10 +98,9 @@ export const useStudentsStore = create<CohortRecordsState>((set) => ({
     }
   },
 
-  getSubmission: async (cohortId, submissionId) => {
+  getSubmission: async (_cohortId, submissionId) => {
     try {
-      if (!USE_MOCK_RECORDS) return null;
-      const { data } = await mockApi.students.getSubmission(cohortId, submissionId);
+      const { data } = await studentsService.submission(submissionId);
       return data;
     } catch {
       return null;
@@ -123,11 +110,7 @@ export const useStudentsStore = create<CohortRecordsState>((set) => ({
   overrideSubmission: async (cohortId, payload) => {
     set({ isOverriding: true, overrideError: null });
     try {
-      if (!USE_MOCK_RECORDS) {
-        set({ overrideError: "No grading override endpoint implemented.", isOverriding: false });
-        return null;
-      }
-      const { data } = await mockApi.students.overrideSubmission(cohortId, payload);
+      const { data } = await studentsService.gradeSubmission(payload.submission_id, payload);
       set((s) => ({
         records: s.records.map((r) => ({
           ...r,

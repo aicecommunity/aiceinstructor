@@ -267,8 +267,8 @@ export const mockApi = {
       row.assessment = {
         id: row.assessment?.id ?? ++assessmentDbId,
         assessment_type: payload.assessment_type,
-        pass_threshold_percent: payload.pass_threshold_percent,
-        max_attempts: payload.max_attempts,
+        pass_threshold_percent: payload.pass_threshold_percent ?? 60,
+        max_attempts: payload.max_attempts ?? 1,
         quiz_question_count: row.quizQuestions.length,
       };
       return { data: toAssessment(row) };
@@ -352,11 +352,11 @@ export const mockApi = {
         repository: payload.repository || courseSlug,
         directory: payload.directory || `unit-${unitOrder}`,
         file_name: payload.file_name,
-        max_score: payload.max_score,
+        max_score: payload.max_score ?? 100,
         branch: payload.branch || "main",
-        starter_repo_url: payload.starter_repo_url,
+        starter_repo_url: payload.starter_repo_url ?? "",
         rules: payload.rules.map((r) => ({ ...r })),
-        is_active: payload.is_active,
+        is_active: payload.is_active ?? true,
         created_at: new Date().toISOString(),
       };
       row.practicalQuestions.push(created);

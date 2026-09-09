@@ -73,7 +73,7 @@ export default function SubmissionReviewDialog({ cohortId, submission, open, onO
     const updated = await overrideSubmission(cohortId, payload);
     if (updated) {
       setLive(updated);
-      toast.success("Override applied (mock — no server endpoint yet)");
+      toast.success("Override applied");
     }
   };
 
@@ -143,16 +143,15 @@ export default function SubmissionReviewDialog({ cohortId, submission, open, onO
               </pre>
             </div>
 
-            {/* Instructor override — PROPOSAL */}
+            {/* Instructor override */}
             <form onSubmit={handleOverride} className="grid gap-4 rounded-md border border-dashed p-4">
               <div className="flex items-start gap-2">
                 <ShieldQuestion className="mt-0.5 size-4 shrink-0 text-amber-600" />
                 <div className="text-xs text-muted-foreground">
-                  <p className="font-medium text-amber-700">Instructor override (proposal)</p>
+                  <p className="font-medium text-amber-700">Instructor override</p>
                   <p className="mt-0.5">
-                    No grading-override write endpoint exists yet. This form documents the
-                    request shape a future endpoint should accept; submitting it only updates
-                    local mock data.
+                    Overrides the automated score/status. The reason is recorded in the
+                    submission feedback and the automated grading output above is preserved.
                   </p>
                 </div>
               </div>
@@ -211,7 +210,7 @@ export default function SubmissionReviewDialog({ cohortId, submission, open, onO
                   Close
                 </Button>
                 <Button type="submit" disabled={isOverriding} variant="outline" className="border-amber-400 text-amber-700 hover:bg-amber-50">
-                  {isOverriding ? "Applying…" : "Apply mock override"}
+                  {isOverriding ? "Applying…" : "Apply override"}
                 </Button>
               </DialogFooter>
             </form>

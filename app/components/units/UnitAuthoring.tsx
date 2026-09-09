@@ -34,6 +34,7 @@ import UnitFormDialog from "./UnitFormDialog";
 import ContentList from "./ContentList";
 import { useAssessmentSummaries } from "../assessment/useAssessmentSummaries";
 import AssessmentStatusBadge from "../assessment/AssessmentStatusBadge";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 export default function UnitAuthoring() {
   const { enrollments, isLoadingEnrollments, enrollmentsError, fetchEnrollments } =
@@ -58,6 +59,8 @@ export default function UnitAuthoring() {
     unit?: CalendarUnit | null;
   }>({ open: false, unit: null });
   const [expandedUnit, setExpandedUnit] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CalendarUnit | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchEnrollments();
@@ -89,14 +92,23 @@ export default function UnitAuthoring() {
   const close = () => setUnitDialog((d) => ({ ...d, open: false }));
 
   const handleDelete = async (unit: CalendarUnit) => {
-    if (!enrollmentId) return;
-    if (!confirm(`Delete unit "${unit.title}"?`)) return;
+    if (!enrollmentId) {
+      setDeleteTarget(null);
+      return;
+    }
+    setDeleting(true);
     await deleteUnit(enrollmentId, unit.id);
     clearUnit(unit.id);
+    setDeleting(false);
+    setDeleteTarget(null);
     toast.success("Unit deleted");
   };
 
   const selectedEnrollment = enrollments.find((e) => e.id === enrollmentId);
+
+  const courseDays = (selectedEnrollment?.course.duration_weeks ?? 0) * 7;
+  const occupiedDays = sortedUnits.reduce((sum, u) => sum + u.duration_days, 0);
+  const availableDays = Math.max(0, courseDays - occupiedDays);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -154,7 +166,16 @@ export default function UnitAuthoring() {
               <p className="text-sm font-medium">
                 {selectedEnrollment?.course.title ?? `Enrollment #${enrollmentId ?? selectedEnrollmentId}`}
               </p>
-              <p className="text-xs text-muted-foreground">ProgramCalendar · {sortedUnits.length} units</p>
+              <p className="text-xs text-muted-foreground">
+                  ProgramCalendar · {sortedUnits.length} units
+                  {courseDays > 0 && (
+                    <>
+                      {" · "}
+                      {occupiedDays}/{courseDays} days occupied ·{" "}
+                      {availableDays} days available
+                    </>
+                  )}
+                </p>
             </div>
             <Button size="sm" onClick={openCreate}>
               <Plus className="size-4" /> Add unit
@@ -198,7 +219,7 @@ export default function UnitAuthoring() {
                           <Button variant="ghost" size="sm" className="px-1.5" onClick={() => openEdit(unit)} aria-label={`Edit ${unit.title}`}>
                             <Pencil className="size-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="px-1.5" onClick={() => handleDelete(unit)} aria-label={`Delete ${unit.title}`}>
+                          <Button variant="ghost" size="sm" className="px-1.5" onClick={() => setDeleteTarget(unit)} aria-label={`Delete ${unit.title}`}>
                             <Trash2 className="size-4" />
                           </Button>
                         </div>
@@ -236,6 +257,23 @@ export default function UnitAuthoring() {
         onOpenChange={close}
         enrollmentId={enrollmentId ?? 0}
         unit={unitDialog.unit}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title="Delete unit"
+        description={
+          deleteTarget
+            ? `Unit "${deleteTarget.title}" and all of its content will be permanently deleted. This cannot be undone.`
+            : ""
+        }
+        loading={deleting}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
       />
     </div>
   );

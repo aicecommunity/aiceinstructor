@@ -26,6 +26,7 @@ import {
 import { useAssessmentStore } from "../../store/useAssessmentStore";
 import type { CalendarUnit } from "../../types/curriculum";
 import type { QuizAnswer, QuizQuestion, QuizQuestionPayload } from "../../types/assessment";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 interface Props {
   courseSlug: string;
@@ -40,14 +41,18 @@ export default function QuizSection({ courseSlug, unit }: Props) {
     open: false,
     question: null,
   });
+  const [deleteTarget, setDeleteTarget] = useState<QuizQuestion | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const openCreate = () => setDialog({ open: true, question: null });
   const openEdit = (q: QuizQuestion) => setDialog({ open: true, question: q });
   const close = () => setDialog((d) => ({ ...d, open: false }));
 
   const handleDelete = async (q: QuizQuestion) => {
-    if (!confirm(`Delete quiz question #${q.order}?`)) return;
+    setDeleting(true);
     await store.deleteQuiz(unit, q.id);
+    setDeleting(false);
+    setDeleteTarget(null);
     toast.success("Quiz question deleted");
   };
 
@@ -55,9 +60,9 @@ export default function QuizSection({ courseSlug, unit }: Props) {
 
   return (
     <div className="rounded-md border bg-muted/10">
-      <div className="flex items-center justify-between border-b px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <span className="text-sm font-medium">Quiz questions</span>
-        <Button size="sm" variant="outline" onClick={openCreate} disabled={store.byUnit[unit.id]?.isSavingQuiz}>
+        <Button size="sm" variant="outline" className="shrink-0" onClick={openCreate} disabled={store.byUnit[unit.id]?.isSavingQuiz}>
           <Plus className="size-4" /> Add question
         </Button>
       </div>
@@ -82,15 +87,15 @@ export default function QuizSection({ courseSlug, unit }: Props) {
                 </p>
                 <p className="mt-1 text-xs">
                   <span className="text-muted-foreground">Correct:</span>{" "}
-                  <Badge variant="secondary">{q.correct_answer}</Badge> ·{" "}
-                  <code className="text-muted-foreground">{q.code}</code>
+                  <Badge variant="secondary">{q.correct_answer}</Badge> 
+                  {/* <code className="text-muted-foreground">·{" "} {q.code}</code> */}
                 </p>
               </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={() => openEdit(q)}>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button variant="ghost" size="sm" className="px-1.5" onClick={() => openEdit(q)}>
                   <Pencil className="size-4" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(q)}>
+                <Button variant="ghost" size="sm" className="px-1.5" onClick={() => setDeleteTarget(q)}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>
@@ -107,6 +112,23 @@ export default function QuizSection({ courseSlug, unit }: Props) {
         nextCode={nextCode}
         unit={unit}
         question={dialog.question}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title="Delete quiz question"
+        description={
+          deleteTarget
+            ? `Quiz question #${deleteTarget.order} will be permanently deleted. This cannot be undone.`
+            : ""
+        }
+        loading={deleting}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
       />
     </div>
   );
@@ -148,6 +170,11 @@ function QuizQuestionDialog({
       toast.error("Please select the correct answer.");
       return;
     }
+    const options = [form.option_a, form.option_b, form.option_c, form.option_d];
+    if (options.some((o) => !o.trim())) {
+      toast.error("All options A–D are required.");
+      return;
+    }
     const payload: QuizQuestionPayload = {
       question_text: form.question_text.trim(),
       option_a: form.option_a.trim(),
@@ -172,7 +199,8 @@ function QuizQuestionDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit quiz question" : "Add quiz question"}</DialogTitle>
           <DialogDescription>
-            Unit {unit.order} · code format <code className="text-xs">{nextCode}</code>
+            Unit {unit.order} 
+            {/* · code format <code className="text-xs">{nextCode}</code> */}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
@@ -193,13 +221,14 @@ function QuizQuestionDialog({
                 ["D", "option_d"],
               ] as const
             ).map(([label, key]) => (
-              <div key={label} className="grid gap-1">
-                <Label>Option {label}</Label>
-                <Input
-                  value={form[key]}
-                  onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                />
-              </div>
+<div key={label} className="grid gap-1">
+                  <Label>Option {label}</Label>
+                  <Input
+                    value={form[key]}
+                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    required
+                  />
+                </div>
             ))}
           </div>
           <div className="grid gap-2">

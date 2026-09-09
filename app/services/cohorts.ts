@@ -12,7 +12,7 @@ export const cohorts = {
   listByEnrollment: (enrollmentId: number) =>
     api.get<Cohort[]>(`/cohorts/enrollments/${enrollmentId}/cohorts/`),
 
-  // GET /api/cohorts/{id}/members/  — paginated members; backend filters role="student".
+  // GET /api/cohorts/{id}/members/  — paginated roster (active CohortMemberships).
   members: (cohortId: number, page = 1, pageSize = 50, search = "") =>
     api.get<PaginatedResults<CohortMember>>(`/cohorts/${cohortId}/members/`, {
       params: { page, page_size: pageSize, search: search || undefined },

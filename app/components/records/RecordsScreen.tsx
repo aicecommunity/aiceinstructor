@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Info, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { useEnrollmentStore } from "../../store/useEnrollmentStore";
 import { useCohortStore } from "../../store/useCohortStore";
 import { useStudentsStore } from "../../store/useStudentsStore";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import NotConnectedBanner from "../NotConnectedBanner";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
 import EmptyState from "../state/EmptyState";
@@ -167,18 +166,9 @@ export default function RecordsScreen() {
         />
       ) : (
         <>
-          <div className="mt-6">
-            <NotConnectedBanner feature="Per-learner records & submission review" />
-          </div>
-
-          <p className="mt-4 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
-            <Info className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              The cohort header below is real (GET /api/cohorts/&#123;id&#125;/progress/). The
-              per-learner roster, quiz/practical status, and submission review are mocked — no
-              instructor-scoped aggregate endpoint exists today; the real cohort-members endpoint
-              is also empty (role=&quot;student&quot; gap).
-            </span>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Roster, completion, quiz attempts, practical submissions, and review are
+            pulled live from the backend for this cohort.
           </p>
 
           {/* REAL aggregate progress header */}
@@ -211,7 +201,7 @@ export default function RecordsScreen() {
             </div>
           ) : null}
 
-          {/* MOCK learner roster */}
+          {/* REAL learner roster */}
           {isLoadingRecords ? (
             <LoadingState className="mt-5" rows={2} />
           ) : recordsError ? (

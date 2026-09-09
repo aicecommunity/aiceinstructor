@@ -14,11 +14,12 @@ export interface CalendarUnitAssessment {
   quiz_question_count: number;
 }
 
-// Writable assessment subset.
+// Writable assessment subset. Only the type is chosen in the UI; the backend
+// applies model defaults for pass_threshold_percent / max_attempts.
 export interface AssessmentPayload {
   assessment_type: AssessmentType;
-  pass_threshold_percent: number;
-  max_attempts: number;
+  pass_threshold_percent?: number;
+  max_attempts?: number;
 }
 
 // QuizQuestion — QuizQuestionFullSerializer fields.
@@ -105,9 +106,9 @@ export interface PracticalQuestionPayload {
   repository: string;
   directory: string;
   file_name: string;
-  max_score: number;
+  max_score?: number;
   branch: string;
-  starter_repo_url: string;
+  starter_repo_url?: string;
   rules: PracticalRule[];
-  is_active: boolean;
+  is_active?: boolean;
 }

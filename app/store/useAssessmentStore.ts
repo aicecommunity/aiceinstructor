@@ -81,6 +81,8 @@ interface AssessmentStoreState {
   updatePractical: (unit: CalendarUnit, questionId: number, payload: PracticalQuestionPayload) => Promise<boolean>;
   deletePractical: (unit: CalendarUnit, questionId: number) => Promise<void>;
 
+  clearPracticalError: (unitId: number) => void;
+
   clearUnit: (unitId: number) => void;
 }
 
@@ -97,6 +99,14 @@ export const useAssessmentStore = create<AssessmentStoreState>((set) => ({
       delete next[unitId];
       return { byUnit: next };
     }),
+
+  clearPracticalError: (unitId) =>
+    set((s) => ({
+      byUnit: {
+        ...s.byUnit,
+        [unitId]: { ...sliceOf(s.byUnit, unitId), practicalSaveError: null },
+      },
+    })),
 
   loadAssessment: async (unit) => {
     const unitId = unit.id;
