@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Award,
   BookOpen,
   ClipboardList,
   FileStack,
@@ -11,12 +12,29 @@ import {
   Library,
   MessageSquare,
   PenSquare,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { AUTH_APP_URL, COMMUNITY_APP_URL, LEARN_APP_URL } from "../utils/MyConstants";
 
-const INSTRUCTOR_ROLES = ["instructor"];
+const INSTRUCTOR_ROLES = ["instructor", "administrator"];
+
+// People who can use the instructor app: superusers, users bound to an
+// instructor OR administrator byline (Instructor/Administrator registries), and
+// profiles whose role is instructor/administrator.
+function canUseInstructorApp(
+  user: { is_superuser?: boolean } | null,
+  profile: { is_instructor_byline?: boolean; is_administrator_byline?: boolean; role?: string | null } | null
+): boolean {
+  if (!user) return false;
+  return (
+    user.is_superuser ||
+    Boolean(profile?.is_instructor_byline) ||
+    Boolean(profile?.is_administrator_byline) ||
+    (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role))
+  );
+}
 
 interface NavItem {
   href: string;
@@ -37,10 +55,24 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: "/", label: "Courses", icon: BookOpen, match: (p) => p === "/" },
       {
+        href: "/certificates",
+        label: "Certificate",
+        icon: Award,
+        match: (p) => p.startsWith("/certificates"),
+        superuserOnly: true,
+      },
+      {
         href: "/instructors",
         label: "Instructors",
         icon: Users,
         match: (p) => p.startsWith("/instructors"),
+        superuserOnly: true,
+      },
+      {
+        href: "/administrators",
+        label: "Administrators",
+        icon: ShieldCheck,
+        match: (p) => p.startsWith("/administrators"),
         superuserOnly: true,
       },
     ],
@@ -85,15 +117,7 @@ export default function Sidebar() {
   // Self-gate: only render the nav to an authorized role, an instructor-byline
   // user, or a superuser. The AuthGate around page content already enforces
   // this; this mirrors it for the shell.
-  if (
-    !user ||
-    !(
-      user.is_superuser ||
-      profile?.is_instructor_byline ||
-      (profile?.role != null && INSTRUCTOR_ROLES.includes(profile.role))
-    )
-  )
-    return null;
+  if (!user || !canUseInstructorApp(user, profile)) return null;
 
   const linkClasses = (item: NavItem) => {
     const active = item.match(pathname);

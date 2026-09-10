@@ -24,6 +24,7 @@ export interface InstructorProfile {
   role_rank: number;
   profile_picture: string | null;
   is_instructor_byline: boolean;
+  is_administrator_byline: boolean;
 }
 
 interface AuthState {

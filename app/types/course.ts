@@ -9,6 +9,8 @@ export interface Instructor {
   profile_image: string | null;
   profile_id: number | null;
   course_count: number;
+  signatory_name: string;
+  signature_image: string | null;
 }
 
 // Candidate returned by the superuser-only registered-user picker
@@ -86,7 +88,33 @@ export interface SlugAvailability {
 // Writable Instructor fields.
 // NOTE: `name` is derived from the linked profile's full_name (read-only on the
 // backend), so the create/edit payload is `profile_id` (Profile.user_id).
+// `title` is no longer captured for instructors (removed from the manager UI).
+// `signatory_name` is what appears on course certificates (blank falls back to
+// `name` on the backend).
 export interface InstructorPayload {
   profile_id: number | null;
+  title?: string;
+  signatory_name: string;
+  // Picked file, sent as multipart. `null`/omitted on edit keeps the existing
+  // signature image on the backend.
+  signature_image?: File | null;
+}
+
+// Administrator registry (a "senior instructor"). Managed by superusers in
+// their own nav; carries a title and unlocks the instructor-app features.
+export interface Administrator {
+  id: number;
+  name: string;
   title: string;
+  email: string | null;
+  profile_id: number | null;
+  signatory_name: string;
+  signature_image: string | null;
+}
+
+export interface AdministratorPayload {
+  profile_id: number | null;
+  title: string;
+  signatory_name: string;
+  signature_image?: File | null;
 }

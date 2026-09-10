@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,35 +12,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useInstructorStore } from "../../store/useInstructorStore";
+import { useAdministratorStore } from "../../store/useAdministratorStore";
 import { useAuthStore } from "../../store/useAuthStore";
-import type { Instructor } from "../../types/course";
-import InstructorFormDialog from "./InstructorFormDialog";
-import ConfirmDeleteInstructorDialog from "./ConfirmDeleteInstructorDialog";
+import type { Administrator } from "../../types/course";
+import AdministratorFormDialog from "./AdministratorFormDialog";
+import ConfirmDeleteAdministratorDialog from "./ConfirmDeleteAdministratorDialog";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
 import AccessDenied from "../AccessDenied";
 
-export default function InstructorsManager() {
+export default function AdministratorsManager() {
   const { user } = useAuthStore();
 
   const {
-    instructors,
-    isLoadingInstructors,
-    instructorsError,
-    fetchInstructors,
-  } = useInstructorStore();
+    administrators,
+    isLoadingAdministrators,
+    administratorsError,
+    fetchAdministrators,
+  } = useAdministratorStore();
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Instructor | null>(null);
+  const [editing, setEditing] = useState<Administrator | null>(null);
   const [formKey, setFormKey] = useState(0);
-  const [deleteTarget, setDeleteTarget] = useState<Instructor | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Administrator | null>(null);
 
   useEffect(() => {
-    fetchInstructors();
-  }, [fetchInstructors]);
+    fetchAdministrators();
+  }, [fetchAdministrators]);
 
-  // The instructor-byline registry is system-wide: superusers only.
+  // The administrator registry is system-wide: superusers only.
   if (user && !user.is_superuser) {
     return <AccessDenied />;
   }
@@ -51,80 +51,75 @@ export default function InstructorsManager() {
     setFormOpen(true);
   };
 
-  const openEdit = (ins: Instructor) => {
-    setEditing(ins);
+  const openEdit = (admin: Administrator) => {
+    setEditing(admin);
     setFormKey((k) => k + 1);
     setFormOpen(true);
-  };
-
-  const handleDeleteClick = (ins: Instructor) => {
-    setDeleteTarget(ins);
   };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Instructors</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Administrators</h1>
           <p className="text-sm text-muted-foreground">
-            All instructors in the system (live /api/courses/instructors/, superuser only).
+            Senior instructors with a title. Each gets access to the same instructor
+            features as an instructor (live /api/courses/administrators/, superuser only).
           </p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="size-4" /> Add instructor
+          <Plus className="size-4" /> Add administrator
         </Button>
       </div>
 
       <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Superuser-only: only the superuser sees the full instructor list and can
-        add/edit/delete instructors. Profile image upload is not supported by the
-        backend yet (read-only field).
+        Superuser-only: only the superuser can add, edit, or remove administrators.
+        Administrators use the instructor app like instructors do.
       </p>
 
-      {isLoadingInstructors ? (
+      {isLoadingAdministrators ? (
         <LoadingState className="mt-6" rows={2} />
-      ) : instructorsError ? (
-        <ErrorState className="mt-6" message={instructorsError} onRetry={fetchInstructors} />
+      ) : administratorsError ? (
+        <ErrorState className="mt-6" message={administratorsError} onRetry={fetchAdministrators} />
       ) : (
         <Table className="mt-6">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">S/N</TableHead>
-              <TableHead>Instructor</TableHead>
+              <TableHead>Administrator</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Courses</TableHead>
+              <TableHead>Title</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {instructors.length === 0 ? (
+            {administrators.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  No instructors yet.
+                  No administrators yet.
                 </TableCell>
               </TableRow>
             ) : (
-              instructors.map((ins, index) => (
-                <TableRow key={ins.id}>
+              administrators.map((admin, index) => (
+                <TableRow key={admin.id}>
                   <TableCell className="text-sm tabular-nums text-muted-foreground">
                     {index + 1}
                   </TableCell>
                   <TableCell>
 <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={ins.profile_image || undefined} alt={ins.name} />
-                          <AvatarFallback>{ins.name.slice(0, 1).toUpperCase()}</AvatarFallback>
+                          <AvatarFallback>{admin.name.slice(0, 1).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{ins.name}</p>
-                          {ins.signatory_name && (
+                          <p className="font-medium">{admin.name}</p>
+                          {admin.signatory_name && (
                             <p className="text-xs text-muted-foreground">
-                              Signs as {ins.signatory_name}
+                              Signs as {admin.signatory_name}
                             </p>
                           )}
-                          {ins.signature_image && (
+                          {admin.signature_image && (
                             <img
-                              src={ins.signature_image}
+                              src={admin.signature_image}
                               alt="Signature"
                               className="mt-1 h-10 w-auto rounded border bg-white p-0.5"
                             />
@@ -134,19 +129,19 @@ export default function InstructorsManager() {
                   </TableCell>
                   <TableCell className="max-w-md whitespace-normal">
                     <span className="line-clamp-2 text-muted-foreground">
-                      {ins.email || "—"}
+                      {admin.email || "—"}
                     </span>
                   </TableCell>
-                  <TableCell>{ins.course_count}</TableCell>
+                  <TableCell>{admin.title || "—"}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(ins)}>
+                      <Button variant="outline" size="sm" onClick={() => openEdit(admin)}>
                         <Pencil className="size-4" />
                       </Button>
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteClick(ins)}
+                        onClick={() => setDeleteTarget(admin)}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -159,19 +154,18 @@ export default function InstructorsManager() {
         </Table>
       )}
 
-      <InstructorFormDialog
+      <AdministratorFormDialog
         key={formKey}
         open={formOpen}
         onOpenChange={setFormOpen}
-        instructor={editing}
+        administrator={editing}
       />
 
-      <ConfirmDeleteInstructorDialog
-        open={deleteTarget !== null}
+      <ConfirmDeleteAdministratorDialog
+        administrator={deleteTarget}
         onOpenChange={(next) => {
           if (!next) setDeleteTarget(null);
         }}
-        instructor={deleteTarget}
       />
     </div>
   );
