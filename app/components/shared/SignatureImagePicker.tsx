@@ -14,11 +14,12 @@ interface Props {
   onFileChange: (file: File | null) => void;
   required?: boolean;
   hint?: string;
+  emptyText?: string;
 }
 
 // File-picker with a live preview. On edit, `existingUrl` shows the current
-// signature; picking a file replaces it on save (stays multipart). Clearing a
-// brand-new pick reverts to the existing/empty state.
+// signature/image; picking a file replaces it on save (stays multipart). Clearing
+// a brand-new pick reverts to the existing/empty state.
 export default function SignatureImagePicker({
   id,
   label,
@@ -27,6 +28,7 @@ export default function SignatureImagePicker({
   onFileChange,
   required,
   hint,
+  emptyText = "No signature",
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export default function SignatureImagePicker({
           />
         ) : (
           <div className="flex h-16 w-28 items-center justify-center rounded border border-dashed text-center text-xs text-muted-foreground">
-            No signature
+            {emptyText}
           </div>
         )}
         <div className="flex flex-col gap-1.5">

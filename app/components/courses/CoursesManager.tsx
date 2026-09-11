@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Fragment } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -87,9 +87,11 @@ export default function CoursesManager() {
           <TableHeader>
             <TableRow>
               <TableHead>S/N</TableHead>
+              <TableHead>Image</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Group link</TableHead>
               <TableHead>Created by</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -97,7 +99,7 @@ export default function CoursesManager() {
           <TableBody>
             {courses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   No courses yet. Create one to get started.
                 </TableCell>
               </TableRow>
@@ -111,6 +113,27 @@ export default function CoursesManager() {
                     }
                   >
                     <TableCell>{index + 1}</TableCell>
+                    <TableCell>
+                      {course.image_url || course.image ? (
+                        <a
+                          href={course.image_url || (course.image as string)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open image in new tab"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <img
+                            src={course.image_url || (course.image as string)}
+                            alt={course.title}
+                            className="h-10 w-16 rounded border object-cover transition-opacity hover:opacity-80"
+                          />
+                        </a>
+                      ) : (
+                        <div className="flex h-10 w-16 items-center justify-center rounded border border-dashed text-muted-foreground">
+                          <ImageIcon className="size-4" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{course.title}</TableCell>
                     <TableCell>
                       {course.duration_weeks} wk
@@ -120,6 +143,23 @@ export default function CoursesManager() {
                         <Badge>Active</Badge>
                       ) : (
                         <Badge variant="secondary">Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {course.group_link ? (
+                        <a
+                          href={course.group_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open group link in new tab"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Badge className="cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground">
+                            Yes
+                          </Badge>
+                        </a>
+                      ) : (
+                        <Badge variant="secondary">No</Badge>
                       )}
                     </TableCell>
                     <TableCell>
@@ -156,7 +196,7 @@ export default function CoursesManager() {
                   {expanded === course.id && (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={8}
                         className="whitespace-normal break-words bg-muted/20 align-top"
                       >
                         <div className="grid gap-4 py-2">

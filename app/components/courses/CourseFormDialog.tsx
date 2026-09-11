@@ -22,6 +22,7 @@ import type {
   CoursePayload,
 } from "../../types/course";
 import CertificatesEditor from "./CertificatesEditor";
+import SignatureImagePicker from "../shared/SignatureImagePicker";
 
 interface Props {
   open: boolean;
@@ -34,14 +35,29 @@ interface EditForm {
   title: string;
   description: string;
   duration_weeks: string;
+  group_link: string;
+}
+
+/** Lightweight URL check — matches the one in CourseCreateForm. */
+function validLink(value: string): boolean {
+  const v = value.trim();
+  if (!v) return true;
+  try {
+    new URL(v);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function formFromCourse(course: Course | null | undefined): EditForm {
-  if (!course) return { title: "", description: "", duration_weeks: "" };
+  if (!course)
+    return { title: "", description: "", duration_weeks: "", group_link: "" };
   return {
     title: course.title ?? "",
     description: course.description ?? "",
     duration_weeks: String(course.duration_weeks ?? ""),
+    group_link: course.group_link ?? "",
   };
 }
 
@@ -71,16 +87,26 @@ export default function CourseFormDialog({
   const [certificatesValid, setCertificatesValid] = useState(() =>
     certsAreValid(course?.certificates ?? [])
   );
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const set = (key: keyof EditForm, value: string | number) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const groupLinkValid = !form.group_link.trim() || validLink(form.group_link);
+
+  // The cover image is compulsory: a newly uploaded file OR the course's
+  // existing image satisfies it.
+  const hasImage = Boolean(
+    imageFile || course?.image_url || course?.image
+  );
 
   const fieldsValid =
     form.title.trim().length > 0 &&
     form.description.trim().length > 0 &&
     Number(form.duration_weeks) >= 1;
 
-  const canSubmit = fieldsValid && certificatesValid && !isSavingCourse;
+  const canSubmit =
+    fieldsValid && certificatesValid && groupLinkValid && hasImage && !isSavingCourse;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +119,8 @@ export default function CourseFormDialog({
       duration_weeks: Number(form.duration_weeks),
       certificates,
       is_active: course.is_active,
+      group_link: form.group_link.trim(),
+      ...(imageFile ? { image: imageFile } : {}),
     };
 
     const saved = await updateCourse(course.id, payload);
@@ -153,6 +181,36 @@ export default function CourseFormDialog({
               onChange={(e) => set("duration_weeks", e.target.value)}
               required
             />
+          </div>
+
+          <SignatureImagePicker
+            id="course-image"
+            label="Course image *"
+            file={imageFile}
+            existingUrl={course?.image_url ?? null}
+            onFileChange={setImageFile}
+            hint="Upload the course cover image (PNG/JPG). Leave empty to keep the current one."
+            emptyText="No image"
+          />
+          {!hasImage && (
+            <p className="-mt-2 text-xs text-red-600">
+              Upload a course cover image. Every course must have one.
+            </p>
+          )}
+
+          <div className="grid gap-2">
+            <Label htmlFor="group_link">Group link (optional)</Label>
+            <Input
+              id="group_link"
+              type="url"
+              value={form.group_link}
+              onChange={(e) => set("group_link", e.target.value)}
+              placeholder="https://t.me/mygroup or https://wa.me/abc"
+            />
+            <p className="text-xs text-muted-foreground">
+              Where your students connect — WhatsApp, Telegram, Discord, or any
+              other social/community link. Leave empty to clear.
+            </p>
           </div>
 
           <CertificatesEditor

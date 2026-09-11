@@ -61,6 +61,9 @@ export interface Course {
   skills: string[];
   certificate_name: string;
   certificates: CourseCertificate[];
+  image: string | null;       // Cloudinary URL; null when no image
+  image_url: string | null;   // Normalised URL; "" when no image
+  group_link: string;         // WhatsApp/Telegram/other social link (may be "")
   instructors: Instructor[];
   prerequisites: CoursePrerequisite[];
   is_active: boolean;
@@ -79,6 +82,11 @@ export interface CoursePayload {
   duration_weeks: number;
   certificates: CourseCertificate[];
   is_active: boolean;
+  // Cover image: required at creation (backend enforces it); on edit a File
+  // replaces the existing image, while omitting it keeps the current one.
+  image?: File | null;
+  // Optional social/community link for enrolled students.
+  group_link?: string;
   // Pricing is write-only on the API and lands on the auto-created
   // Enrollment (CourseViewSet.perform_create). Only sent on create.
   is_paid?: boolean;

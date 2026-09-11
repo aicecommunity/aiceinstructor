@@ -13,10 +13,23 @@ import { useCourseStore } from "../../store/useCourseStore";
 import { formatNaira, nairaToNumber } from "@/lib/format";
 import type { CourseCertificate } from "../../types/course";
 import CertificatesEditor from "./CertificatesEditor";
+import SignatureImagePicker from "../shared/SignatureImagePicker";
 
 const PREFIX = "aice-";
 const MAX_SLUG_CORE = 5;
 const CURRENCY = "NGN";
+
+/** Lightweight URL check — anything that new URL() accepts is valid. */
+function validLink(value: string): boolean {
+  const v = value.trim();
+  if (!v) return true;
+  try {
+    new URL(v);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 interface FormState {
   title: string;
@@ -25,6 +38,7 @@ interface FormState {
   duration_weeks: string;
   is_paid: boolean;
   price: string;
+  group_link: string;
 }
 
 const emptyForm: FormState = {
@@ -34,6 +48,7 @@ const emptyForm: FormState = {
   duration_weeks: "",
   is_paid: false,
   price: "",
+  group_link: "",
 };
 
 interface FieldErrors {
@@ -44,6 +59,8 @@ interface FieldErrors {
   price?: string;
   certificates?: string;
   skillsErr?: string;
+  image?: string;
+  group_link?: string;
 }
 
 export default function CourseCreateForm() {
@@ -54,6 +71,7 @@ export default function CourseCreateForm() {
   const [certificates, setCertificates] = useState<CourseCertificate[]>([]);
   const [certificatesValid, setCertificatesValid] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [slugState, setSlugState] = useState<
     | { status: "idle" | "checking" | "ok" | "taken"; message?: string }
     | undefined
@@ -171,6 +189,10 @@ export default function CourseCreateForm() {
     visibleErrors.certificates = "Add at least one certificate.";
   if (touched.certificates && certificates.some((c) => c.skills.length === 0))
     visibleErrors.skillsErr = "Each certificate needs at least one skill.";
+  if (touched.image && !imageFile)
+    visibleErrors.image = "Upload a course cover image.";
+  if (touched.group_link && form.group_link.trim() && !validLink(form.group_link))
+    visibleErrors.group_link = "Enter a valid link (e.g. https://t.me/mygroup or https://wa.me/abc).";
 
   const fieldsValid =
     !validateField("title") &&
@@ -179,8 +201,10 @@ export default function CourseCreateForm() {
     !validateField("price") &&
     !slugClientError();
 
+  const groupLinkValid = !form.group_link.trim() || validLink(form.group_link);
+
   const canSubmit =
-    fieldsValid && certificatesValid && slugState?.status === "ok" && !isSavingCourse;
+    fieldsValid && certificatesValid && slugState?.status === "ok" && Boolean(imageFile) && groupLinkValid && !isSavingCourse;
 
   const recordTouched = (key: string) =>
     setTouched((t) => (t[key] ? t : { ...t, [key]: true }));
@@ -195,6 +219,8 @@ export default function CourseCreateForm() {
       price: true,
       certificates: true,
       skills: true,
+      image: true,
+      group_link: true,
     });
     if (!canSubmit) return;
 
@@ -205,6 +231,8 @@ export default function CourseCreateForm() {
       duration_weeks: Number(form.duration_weeks),
       certificates,
       is_active: true,
+      image: imageFile,
+      group_link: form.group_link.trim(),
       is_paid: form.is_paid,
       price: form.is_paid ? Number(nairaToNumber(form.price)) : 0,
       currency: CURRENCY,
@@ -253,6 +281,23 @@ export default function CourseCreateForm() {
             <p className="text-xs text-red-600">{visibleErrors.title}</p>
           )}
         </div>
+
+        <SignatureImagePicker
+          id="course-image"
+          label="Course image *"
+          file={imageFile}
+          existingUrl={null}
+          onFileChange={(file) => {
+            setImageFile(file);
+            recordTouched("image");
+          }}
+          required
+          hint="Upload the course cover image (PNG/JPG). This is required to create the course."
+          emptyText="No image"
+        />
+        {visibleErrors.image && (
+          <p className="-mt-2 text-xs text-red-600">{visibleErrors.image}</p>
+        )}
 
         <div className="grid gap-2">
           <Label htmlFor="slug">Slug *</Label>
@@ -315,6 +360,27 @@ export default function CourseCreateForm() {
             <p className="text-xs text-red-600">
               {visibleErrors.duration_weeks}
             </p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="group_link">Group link (optional)</Label>
+          <Input
+            id="group_link"
+            type="url"
+            value={form.group_link}
+            onChange={(e) => set("group_link", e.target.value)}
+            onBlur={() => recordTouched("group_link")}
+            placeholder="https://t.me/mygroup or https://wa.me/abc"
+            aria-invalid={Boolean(visibleErrors.group_link)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Where your students can connect while the course runs — WhatsApp,
+            Telegram, Discord, or any other social/community link. This field is
+            optional.
+          </p>
+          {visibleErrors.group_link && (
+            <p className="text-xs text-red-600">{visibleErrors.group_link}</p>
           )}
         </div>
 
