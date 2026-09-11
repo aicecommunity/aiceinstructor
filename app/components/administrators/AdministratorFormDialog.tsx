@@ -11,13 +11,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { instructors as instructorsService } from "../../services/instructors";
+import { administrators as administratorsService } from "../../services/administrators";
 import { useAdministratorStore } from "../../store/useAdministratorStore";
+import { useTitleStore } from "../../store/useTitleStore";
 import SignatureImagePicker from "../shared/SignatureImagePicker";
-import type { Administrator, InstructorCandidate, AdministratorPayload } from "../../types/course";
+import type { Administrator, AdministratorCandidate, AdministratorPayload } from "../../types/course";
 
 interface Props {
   open: boolean;
@@ -25,7 +33,7 @@ interface Props {
   administrator?: Administrator | null;
 }
 
-function candidateFromAdministrator(admin: Administrator): InstructorCandidate | null {
+function candidateFromAdministrator(admin: Administrator): AdministratorCandidate | null {
   if (admin.profile_id == null || !admin.email) return null;
   return {
     user_id: admin.profile_id,
@@ -42,29 +50,34 @@ export default function AdministratorFormDialog({
 }: Props) {
   const { createAdministrator, updateAdministrator, isSavingAdministrator, administratorSaveError } =
     useAdministratorStore();
+  const { titles: titleOptions, fetchTitles } = useTitleStore();
 
   const [query, setQuery] = useState(administrator?.name ?? "");
-  const [selected, setSelected] = useState<InstructorCandidate | null>(
+  const [selected, setSelected] = useState<AdministratorCandidate | null>(
     administrator ? candidateFromAdministrator(administrator) : null
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [results, setResults] = useState<InstructorCandidate[]>([]);
+  const [results, setResults] = useState<AdministratorCandidate[]>([]);
   const [openList, setOpenList] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [title, setTitle] = useState(administrator?.title ?? "");
+  const [titleId, setTitleId] = useState<number | null>(administrator?.title ?? null);
   const [signatoryName, setSignatoryName] = useState(administrator?.signatory_name ?? "");
   const [sigFile, setSigFile] = useState<File | null>(null);
+  // Signature coming from the person's current instructor entry (not re-uploaded).
+  const [carriedSignature, setCarriedSignature] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const isEdit = Boolean(administrator);
 
   useEffect(() => {
     if (!open) return;
+    fetchTitles();
     setQuery(administrator?.name ?? "");
     setSelected(administrator ? candidateFromAdministrator(administrator) : null);
-    setTitle(administrator?.title ?? "");
+    setTitleId(administrator?.title ?? null);
     setSignatoryName(administrator?.signatory_name ?? "");
     setSigFile(null);
+    setCarriedSignature(null);
     setSearchQuery("");
     setResults([]);
     setOpenList(false);
@@ -79,7 +92,7 @@ export default function AdministratorFormDialog({
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const { data } = await instructorsService.searchCandidates(q);
+        const { data } = await administratorsService.searchCandidates(q);
         if (cancelled) return;
         setResults(data);
         setOpenList(data.length > 0);
@@ -112,8 +125,10 @@ export default function AdministratorFormDialog({
   }, [openList]);
 
   const handleQueryChange = (value: string) => {
+    if (isEdit) return; // the linked user can't be changed on edit
     setQuery(value);
     setSelected(null);
+    setCarriedSignature(null);
     if (!value.trim()) {
       setResults([]);
       setOpenList(false);
@@ -121,15 +136,23 @@ export default function AdministratorFormDialog({
     setSearchQuery(value);
   };
 
-  const pickCandidate = (candidate: InstructorCandidate) => {
+  const pickCandidate = (candidate: AdministratorCandidate) => {
     setSelected(candidate);
     setQuery(candidate.full_name);
     setOpenList(false);
+    // When the person is currently an instructor, carry their signatory name
+    // and signature over so neither has to be re-entered on the move to
+    // Administrators.
+    if (candidate.signatory_name) {
+      setSignatoryName(candidate.signatory_name);
+    }
+    setCarriedSignature(candidate.signature_image ?? null);
   };
 
   const clearSelection = () => {
     setSelected(null);
     setQuery("");
+    setCarriedSignature(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,22 +162,22 @@ export default function AdministratorFormDialog({
       toast.error("Search and pick a registered user for this administrator.");
       return;
     }
-    if (!title.trim()) {
-      toast.error("Title is required.");
+    if (!titleId) {
+      toast.error("Select a title for this administrator.");
       return;
     }
     if (!signatoryName.trim()) {
       toast.error("Signatory name is required.");
       return;
     }
-    if (!isEdit && !sigFile) {
+    if (!sigFile && !carriedSignature && !isEdit) {
       toast.error("Upload the administrator's signature image.");
       return;
     }
 
     const payload: AdministratorPayload = {
       profile_id: selected.user_id,
-      title: title.trim(),
+      title: titleId,
       signatory_name: signatoryName.trim(),
       // Only send a signature when a new one was picked — omitting it on edit
       // keeps the existing image on the backend (sending null would wipe it).
@@ -194,10 +217,11 @@ export default function AdministratorFormDialog({
                   value={query}
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onFocus={() => {
-                    if (!selected && results.length > 0) setOpenList(true);
+                    if (!isEdit && !selected && results.length > 0) setOpenList(true);
                   }}
                   placeholder="Search name or email…"
                   autoComplete="off"
+                  disabled={isEdit}
                 />
                 {searching && (
                   <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -211,16 +235,18 @@ export default function AdministratorFormDialog({
                     <p className="text-sm font-medium">{selected.full_name}</p>
                     <p className="truncate text-xs text-muted-foreground">{selected.email}</p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="ml-auto size-6"
-                    onClick={clearSelection}
-                    aria-label="Clear selection"
-                  >
-                    <X className="size-4" />
-                  </Button>
+                  {!isEdit && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto size-6"
+                      onClick={clearSelection}
+                      aria-label="Clear selection"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -241,19 +267,32 @@ export default function AdministratorFormDialog({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Only registered AiCE users can be made administrators.
+              {isEdit
+                ? "The user this administrator is linked to cannot be changed."
+                : "Only registered AiCE users can be made administrators. If the person is currently an instructor, adding them here moves them from the Instructors list (a person can only be in one registry)."}
             </p>
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="adm-title">Title *</Label>
-            <Input
-              id="adm-title"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Director, Assistant Director"
-            />
+            <Select
+              value={titleId?.toString() ?? ""}
+              onValueChange={(val) => setTitleId(Number(val))}
+            >
+              <SelectTrigger className="w-full" id="adm-title">
+                <SelectValue placeholder="Select a title" />
+              </SelectTrigger>
+              <SelectContent>
+                {titleOptions.map((t) => (
+                  <SelectItem key={t.id} value={t.id.toString()}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Titles are defined in the Titles page (superuser only).
+            </p>
           </div>
 
           <div className="grid gap-2">
@@ -275,10 +314,14 @@ export default function AdministratorFormDialog({
             id="adm-signature"
             label="Signature image (on certificates) *"
             file={sigFile}
-            existingUrl={administrator?.signature_image ?? null}
+            existingUrl={administrator?.signature_image ?? carriedSignature ?? null}
             onFileChange={setSigFile}
-            required={!isEdit}
-            hint="Required when adding an administrator; leave it as-is to keep the current signature on edit."
+            required={!isEdit && !carriedSignature}
+            hint={
+              carriedSignature
+                ? "Carried over from the person's instructor entry — no upload needed. Pick a file to replace it."
+                : "Required when adding an administrator; leave it as-is to keep the current signature on edit."
+            }
           />
 
           {administratorSaveError && (

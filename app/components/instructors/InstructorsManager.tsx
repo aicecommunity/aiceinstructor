@@ -91,6 +91,7 @@ export default function InstructorsManager() {
             <TableRow>
               <TableHead className="w-12">S/N</TableHead>
               <TableHead>Instructor</TableHead>
+              <TableHead>Title</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Courses</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -99,7 +100,7 @@ export default function InstructorsManager() {
           <TableBody>
             {instructors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No instructors yet.
                 </TableCell>
               </TableRow>
@@ -131,6 +132,9 @@ export default function InstructorsManager() {
                           )}
                         </div>
                       </div>
+                  </TableCell>
+                  <TableCell className="whitespace-normal text-muted-foreground">
+                    {ins.title || "Program Director"}
                   </TableCell>
                   <TableCell className="max-w-md whitespace-normal">
                     <span className="line-clamp-2 text-muted-foreground">

@@ -1,5 +1,6 @@
 // app/store/useCertificateStore.ts
-// Certificate signatories + per-course signatory assignments (superuser only).
+// Certificate signatories, template images + per-course signatory assignments.
+// All superuser-only.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -7,9 +8,11 @@ import { create } from "zustand";
 import { certificates as certificatesService } from "../services/certificates";
 import type {
   Signatory,
-  SignatoryPayload,
   CertificateCourse,
   SignatoryAssignment,
+  CertificateTemplate,
+  CertificateTemplatePayload,
+  CertificateTemplateType,
 } from "../types/certificates";
 
 function formatFieldErrors(err: any): string {
@@ -31,8 +34,6 @@ interface CertificateState {
   signatories: Signatory[];
   isLoadingSignatories: boolean;
   signatoriesError: string | null;
-  isSavingSignatory: boolean;
-  signatorySaveError: string | null;
 
   courses: CertificateCourse[];
   isLoadingCourses: boolean;
@@ -40,29 +41,43 @@ interface CertificateState {
   isAssigning: boolean;
   assigningError: string | null;
 
+  templates: CertificateTemplate[];
+  isLoadingTemplates: boolean;
+  templatesError: string | null;
+  isSavingTemplate: boolean;
+  templateSaveError: string | null;
+  isDeletingTemplate: boolean;
+
   fetchAll: () => Promise<void>;
   fetchSignatories: () => Promise<void>;
   fetchCourses: () => Promise<void>;
+  fetchTemplates: () => Promise<void>;
 
-  createSignatory: (data: SignatoryPayload) => Promise<Signatory | null>;
-  updateSignatory: (id: number, data: SignatoryPayload) => Promise<Signatory | null>;
-  deleteSignatory: (id: number) => Promise<void>;
+  createTemplate: (data: CertificateTemplatePayload) => Promise<CertificateTemplate | null>;
+  updateTemplate: (id: number, data: CertificateTemplatePayload) => Promise<CertificateTemplate | null>;
+  deleteTemplate: (id: number) => Promise<boolean>;
+  clearTemplateSaveError: () => void;
 
-  assignSignatories: (courseId: number, assignments: SignatoryAssignment[]) => Promise<CertificateCourse | null>;
+  assignSignatories: (courseId: number, assignments: SignatoryAssignment[], signatureType: CertificateTemplateType) => Promise<CertificateCourse | null>;
 }
 
 export const useCertificateStore = create<CertificateState>((set) => ({
   signatories: [],
   isLoadingSignatories: false,
   signatoriesError: null,
-  isSavingSignatory: false,
-  signatorySaveError: null,
 
   courses: [],
   isLoadingCourses: false,
   coursesError: null,
   isAssigning: false,
   assigningError: null,
+
+  templates: [],
+  isLoadingTemplates: false,
+  templatesError: null,
+  isSavingTemplate: false,
+  templateSaveError: null,
+  isDeletingTemplate: false,
 
   fetchSignatories: async () => {
     set({ isLoadingSignatories: true, signatoriesError: null });
@@ -87,57 +102,79 @@ export const useCertificateStore = create<CertificateState>((set) => ({
     }
   },
 
-  fetchAll: async () => {
-    // Kick both loads; each manages its own loading/error flags.
-    useCertificateStore.getState().fetchSignatories();
-    useCertificateStore.getState().fetchCourses();
+  fetchTemplates: async () => {
+    set({ isLoadingTemplates: true, templatesError: null });
+    try {
+      const { data } = await certificatesService.listTemplates();
+      // Oldest first (id auto-increments with creation), stable across all
+      // load paths — matches the sort applied on create/update below.
+      set({ templates: [...data].sort((a, b) => a.id - b.id), isLoadingTemplates: false });
+    } catch (err: any) {
+      set({ templatesError: formatFieldErrors(err), isLoadingTemplates: false });
+    }
   },
 
-  createSignatory: async (data: SignatoryPayload) => {
-    set({ isSavingSignatory: true, signatorySaveError: null });
+  fetchAll: async () => {
+    // Kick all loads; each manages its own loading/error flags.
+    useCertificateStore.getState().fetchSignatories();
+    useCertificateStore.getState().fetchCourses();
+    useCertificateStore.getState().fetchTemplates();
+  },
+
+  createTemplate: async (data: CertificateTemplatePayload) => {
+    set({ isSavingTemplate: true, templateSaveError: null });
     try {
-      const { data: created } = await certificatesService.createSignatory(data);
+      const { data: created } = await certificatesService.createTemplate(data);
       set((s) => ({
-        signatories: [...s.signatories, created].sort((a, b) => a.order - b.order),
-        isSavingSignatory: false,
+        templates: [...s.templates, created].sort((a, b) => a.id - b.id),
+        isSavingTemplate: false,
       }));
       return created;
     } catch (err: any) {
-      set({ signatorySaveError: formatFieldErrors(err), isSavingSignatory: false });
+      set({ templateSaveError: formatFieldErrors(err), isSavingTemplate: false });
       return null;
     }
   },
 
-  updateSignatory: async (id: number, data: SignatoryPayload) => {
-    set({ isSavingSignatory: true, signatorySaveError: null });
+  updateTemplate: async (id: number, data: CertificateTemplatePayload) => {
+    set({ isSavingTemplate: true, templateSaveError: null });
     try {
-      const { data: updated } = await certificatesService.updateSignatory(id, data);
+      const { data: updated } = await certificatesService.updateTemplate(id, data);
       set((s) => ({
-        signatories: s.signatories.map((sig) => (sig.id === id ? updated : sig)).sort((a, b) => a.order - b.order),
-        isSavingSignatory: false,
+        templates: s.templates
+          .map((t) => (t.id === id ? updated : t))
+          .sort((a, b) => a.id - b.id),
+        isSavingTemplate: false,
       }));
       return updated;
     } catch (err: any) {
-      set({ signatorySaveError: formatFieldErrors(err), isSavingSignatory: false });
+      set({ templateSaveError: formatFieldErrors(err), isSavingTemplate: false });
       return null;
     }
   },
 
-  deleteSignatory: async (id: number) => {
+  deleteTemplate: async (id: number) => {
+    set({ isDeletingTemplate: true });
     try {
-      await certificatesService.deleteSignatory(id);
+      await certificatesService.deleteTemplate(id);
       set((s) => ({
-        signatories: s.signatories.filter((sig) => sig.id !== id),
+        templates: s.templates.filter((t) => t.id !== id),
+        isDeletingTemplate: false,
       }));
+      return true;
     } catch {
-      // surface via existing list error if needed
+      set({ isDeletingTemplate: false });
+      return false;
     }
   },
 
-  assignSignatories: async (courseId: number, assignments: SignatoryAssignment[]) => {
+  clearTemplateSaveError: () => set({ templateSaveError: null }),
+
+  assignSignatories: async (courseId: number, assignments: SignatoryAssignment[], signatureType: CertificateTemplateType) => {
     set({ isAssigning: true, assigningError: null });
     try {
       const { data } = await certificatesService.assignSignatories(courseId, {
+        signature_type: signatureType,
         signatories: assignments,
       });
       set((s) => ({

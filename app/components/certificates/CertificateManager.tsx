@@ -3,7 +3,7 @@
 import { Award } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import AccessDenied from "../AccessDenied";
-import SignatoriesSection from "./SignatoriesSection";
+import TemplatesSection from "./TemplatesSection";
 import CoursesSection from "./CoursesSection";
 
 export default function CertificateManager() {
@@ -22,13 +22,14 @@ export default function CertificateManager() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Certificates</h1>
           <p className="text-sm text-muted-foreground">
-            Manage certificate signatories and assign them to courses (superuser only).
+            Manage certificate templates and assign instructors and administrators
+            to sign course certificates (superuser only).
           </p>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <SignatoriesSection />
+      <div className="mt-6 grid gap-6">
+        <TemplatesSection />
         <CoursesSection />
       </div>
     </div>

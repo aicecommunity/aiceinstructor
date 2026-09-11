@@ -30,11 +30,12 @@ interface AdministratorState {
 
   isSavingAdministrator: boolean;
   administratorSaveError: string | null;
+  isDeletingAdministrator: boolean;
 
   fetchAdministrators: () => Promise<void>;
   createAdministrator: (data: AdministratorPayload) => Promise<Administrator | null>;
   updateAdministrator: (id: number, data: AdministratorPayload) => Promise<Administrator | null>;
-  deleteAdministrator: (id: number) => Promise<void>;
+  deleteAdministrator: (id: number) => Promise<boolean>;
 }
 
 export const useAdministratorStore = create<AdministratorState>((set) => ({
@@ -45,6 +46,7 @@ export const useAdministratorStore = create<AdministratorState>((set) => ({
 
   isSavingAdministrator: false,
   administratorSaveError: null,
+  isDeletingAdministrator: false,
 
   fetchAdministrators: async () => {
     set({ isLoadingAdministrators: true, administratorsError: null });
@@ -90,13 +92,17 @@ export const useAdministratorStore = create<AdministratorState>((set) => ({
   },
 
   deleteAdministrator: async (id: number) => {
+    set({ isDeletingAdministrator: true });
     try {
       await administratorsService.delete(id);
       set((s) => ({
         administrators: s.administrators.filter((a) => a.id !== id),
+        isDeletingAdministrator: false,
       }));
+      return true;
     } catch {
-      // surface via existing list error if needed
+      set({ isDeletingAdministrator: false });
+      return false;
     }
   },
 }));

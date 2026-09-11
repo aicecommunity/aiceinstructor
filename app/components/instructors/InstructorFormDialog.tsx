@@ -100,6 +100,7 @@ export default function InstructorFormDialog({
   }, [openList]);
 
   const handleQueryChange = (value: string) => {
+    if (isEdit) return; // the linked user can't be changed on edit
     setQuery(value);
     setSelected(null); // typing a new search overrides the current pick
     if (!value.trim()) {
@@ -179,10 +180,11 @@ export default function InstructorFormDialog({
                   value={query}
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onFocus={() => {
-                    if (!selected && results.length > 0) setOpenList(true);
+                    if (!isEdit && !selected && results.length > 0) setOpenList(true);
                   }}
                   placeholder="Search name or email…"
                   autoComplete="off"
+                  disabled={isEdit}
                 />
                 {searching && (
                   <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -198,16 +200,18 @@ export default function InstructorFormDialog({
                       {selected.email}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="ml-auto size-6"
-                    onClick={clearSelection}
-                    aria-label="Clear selection"
-                  >
-                    <X className="size-4" />
-                  </Button>
+                  {!isEdit && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto size-6"
+                      onClick={clearSelection}
+                      aria-label="Clear selection"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -230,7 +234,9 @@ export default function InstructorFormDialog({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Only registered AiCE users can be made instructors.
+              {isEdit
+                ? "The user this instructor is linked to cannot be changed."
+                : "Only registered AiCE users can be made instructors."}
             </p>
           </div>
 

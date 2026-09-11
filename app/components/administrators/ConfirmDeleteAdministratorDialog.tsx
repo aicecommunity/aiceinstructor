@@ -11,19 +11,26 @@ interface Props {
 }
 
 export default function ConfirmDeleteAdministratorDialog({ administrator, onOpenChange }: Props) {
-  const { deleteAdministrator } = useAdministratorStore();
+  const { deleteAdministrator, isDeletingAdministrator } = useAdministratorStore();
 
   const handleConfirm = async () => {
     if (!administrator) return;
-    await deleteAdministrator(administrator.id);
-    toast.success("Administrator removed");
-    onOpenChange(false);
+    const ok = await deleteAdministrator(administrator.id);
+    if (ok) {
+      toast.success("Administrator removed");
+      onOpenChange(false);
+    } else {
+      toast.error("Could not remove administrator. Please try again.");
+    }
   };
 
   return (
     <ConfirmDialog
       open={administrator !== null}
-      onOpenChange={onOpenChange}
+      onOpenChange={(next) => {
+        if (!next && isDeletingAdministrator) return;
+        onOpenChange(next);
+      }}
       title="Remove administrator?"
       description={
         <span>
@@ -32,6 +39,7 @@ export default function ConfirmDeleteAdministratorDialog({ administrator, onOpen
         </span>
       }
       confirmLabel="Remove"
+      loading={isDeletingAdministrator}
       onConfirm={handleConfirm}
     />
   );

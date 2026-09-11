@@ -14,14 +14,6 @@ export interface Signatory {
   updated_at: string;
 }
 
-export interface SignatoryPayload {
-  name: string;
-  title: string;
-  organization?: string;
-  order: number;
-  is_active: boolean;
-}
-
 export interface CertificateCourseSignatory {
   id: number;
   name: string;
@@ -29,11 +21,20 @@ export interface CertificateCourseSignatory {
   order: number;
 }
 
+// The certificate layout a course uses (the chosen CertificateTemplate).
+export interface CertificateCourseLayout {
+  id: number;
+  name: string;
+  signature_type: CertificateTemplateType;
+  image_url: string | null;
+}
+
 export interface CertificateCourse {
   id: number;
   title: string;
   slug: string;
   certificate_name: string;
+  layout: CertificateCourseLayout | null;
   signatories: CertificateCourseSignatory[];
 }
 
@@ -44,5 +45,28 @@ export interface SignatoryAssignment {
 }
 
 export interface AssignSignatoriesRequest {
+  signature_type: CertificateTemplateType;
   signatories: SignatoryAssignment[];
+}
+
+// Certificate template images (superuser-managed). Two variants exist.
+export type CertificateTemplateType = "2" | "3";
+
+export interface CertificateTemplate {
+  id: number;
+  name: string;
+  signature_type: CertificateTemplateType;
+  image_url: string | null;
+  is_active: boolean;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CertificateTemplatePayload {
+  name: string;
+  signature_type: CertificateTemplateType;
+  is_active: boolean;
+  // Picked file, sent as multipart. `null`/omitted on edit keeps the existing image.
+  image?: File | null;
 }

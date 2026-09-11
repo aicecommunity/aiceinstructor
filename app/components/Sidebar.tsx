@@ -75,6 +75,13 @@ const GROUPS: NavGroup[] = [
         match: (p) => p.startsWith("/administrators"),
         superuserOnly: true,
       },
+      {
+        href: "/titles",
+        label: "Titles",
+        icon: ClipboardList,
+        match: (p) => p.startsWith("/titles"),
+        superuserOnly: true,
+      },
     ],
   },
   {

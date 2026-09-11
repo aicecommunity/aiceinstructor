@@ -89,13 +89,14 @@ export default function AdministratorsManager() {
               <TableHead>Administrator</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Title</TableHead>
+              <TableHead>Courses</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {administrators.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No administrators yet.
                 </TableCell>
               </TableRow>
@@ -132,7 +133,8 @@ export default function AdministratorsManager() {
                       {admin.email || "—"}
                     </span>
                   </TableCell>
-                  <TableCell>{admin.title || "—"}</TableCell>
+                  <TableCell>{admin.title_name || "—"}</TableCell>
+                  <TableCell>{admin.course_count}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-1">
                       <Button variant="outline" size="sm" onClick={() => openEdit(admin)}>

@@ -21,7 +21,7 @@ export function toJSON(payload: InstructorPayload | AdministratorPayload) {
 export function toFormData(payload: InstructorPayload | AdministratorPayload): FormData {
   const fd = new FormData();
   if (payload.profile_id != null) fd.append("profile_id", String(payload.profile_id));
-  if (payload.title != null) fd.append("title", payload.title);
+  if (payload.title != null) fd.append("title", String(payload.title));
   if (payload.signatory_name != null) fd.append("signatory_name", payload.signatory_name);
   if (payload.signature_image instanceof File) {
     fd.append("signature_image", payload.signature_image);

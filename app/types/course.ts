@@ -22,6 +22,15 @@ export interface InstructorCandidate {
   username: string;
 }
 
+// Candidate from the administrator picker (GET /api/profiles/administrator-candidates/?q=...).
+// People who are currently instructors are included; `signatory_name` and
+// `signature_image` carry over from their instructor entry so the form can
+// prefill both when they move here.
+export interface AdministratorCandidate extends InstructorCandidate {
+  signatory_name?: string | null;
+  signature_image?: string | null;
+}
+
 export interface CoursePrerequisite {
   id: number;
   prerequisite_course: string;
@@ -101,20 +110,38 @@ export interface InstructorPayload {
 }
 
 // Administrator registry (a "senior instructor"). Managed by superusers in
-// their own nav; carries a title and unlocks the instructor-app features.
+// their own nav; carries a title from the title registry and unlocks the
+// instructor-app features.
 export interface Administrator {
   id: number;
   name: string;
-  title: string;
+  title: number;       // Primary key of the chosen AdministratorTitle
+  title_name: string;  // Human-readable title name
   email: string | null;
   profile_id: number | null;
+  course_count: number;
   signatory_name: string;
   signature_image: string | null;
 }
 
 export interface AdministratorPayload {
   profile_id: number | null;
-  title: string;
+  title: number;       // AdministratorTitle PK
   signatory_name: string;
   signature_image?: File | null;
+}
+
+// Reusable administrator titles — a small, ordered registry the superuser
+// manages independently. Each administrator picks one when they're created.
+export interface AdministratorTitle {
+  id: number;
+  name: string;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdministratorTitlePayload {
+  name: string;
+  order?: number | null;
 }
