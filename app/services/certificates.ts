@@ -40,9 +40,16 @@ export const certificates = {
 
   // Courses with assigned signatories — /api/certificates/courses/
   listCourses: () => api.get<CertificateCourse[]>("/certificates/courses/"),
+  // Replaces the layout + signatories of a single certificate definition
+  // (one credential the course awards). definition_index reflects its position
+  // in the course's certificates JSON.
   assignSignatories: (
     courseId: number,
+    definitionIndex: number,
     data: AssignSignatoriesRequest,
   ) =>
-    api.put<CertificateCourse>(`/certificates/courses/${courseId}/signatories/`, data),
+    api.put<CertificateCourse>(
+      `/certificates/courses/${courseId}/definitions/${definitionIndex}/`,
+      data,
+    ),
 };

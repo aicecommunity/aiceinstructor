@@ -51,6 +51,11 @@ export interface CourseCertificate {
   skills: string[];
 }
 
+// Course visibility status (Course.Status on the backend).
+// active = shown in the catalog & enrollable; coming_soon = shown but not yet
+// open for enrollment; inactive = hidden from the learner catalog.
+export type CourseStatus = "active" | "inactive" | "coming_soon";
+
 // Course as returned by CourseSerializer (all response fields).
 export interface Course {
   id: number;
@@ -66,7 +71,7 @@ export interface Course {
   group_link: string;         // WhatsApp/Telegram/other social link (may be "")
   instructors: Instructor[];
   prerequisites: CoursePrerequisite[];
-  is_active: boolean;
+  status: CourseStatus;
   created_by: CourseCreator | null;
   created_at: string;
   updated_at: string;
@@ -81,7 +86,7 @@ export interface CoursePayload {
   description: string;
   duration_weeks: number;
   certificates: CourseCertificate[];
-  is_active: boolean;
+  status: CourseStatus;
   // Cover image: required at creation (backend enforces it); on edit a File
   // replaces the existing image, while omitting it keeps the current one.
   image?: File | null;

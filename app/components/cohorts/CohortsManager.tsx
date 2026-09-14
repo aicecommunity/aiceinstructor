@@ -122,6 +122,9 @@ export default function CohortsManager() {
                     </TableCell>
                     <TableCell>{cohort.progress}%</TableCell>
                     <TableCell className="text-right">
+                      <span className="mr-2 text-sm text-muted-foreground">
+                        {cohort.member_count ?? 0}
+                      </span>
                       <Button variant="ghost" size="sm">
                         <Users className="size-4" />
                       </Button>

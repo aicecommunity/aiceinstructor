@@ -62,6 +62,7 @@ export interface Cohort {
   available: boolean;
   capacity: number;
   remaining_slots: number | null;
+  member_count: number;
   enrollment: number;
   enrollment_name: string;
   enrollment_code: string;
@@ -84,6 +85,15 @@ export interface CohortMember {
   profile_picture: string | null;
   rank: string;
   occupation: string;
+}
+
+// GET /api/enrollments/<id>/stats/ — aggregate counts across all cohorts.
+export interface EnrollmentStats {
+  enrollment_id: number;
+  total_enrolled: number;
+  learning: number;
+  completed: number;
+  failed: number;
 }
 
 export interface PaginatedResults<T> {

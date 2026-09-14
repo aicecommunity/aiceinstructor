@@ -14,12 +14,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useCourseStore } from "../../store/useCourseStore";
 import type {
   Course,
   CourseCertificate,
   CoursePayload,
+  CourseStatus,
 } from "../../types/course";
 import CertificatesEditor from "./CertificatesEditor";
 import SignatureImagePicker from "../shared/SignatureImagePicker";
@@ -36,6 +44,7 @@ interface EditForm {
   description: string;
   duration_weeks: string;
   group_link: string;
+  status: CourseStatus;
 }
 
 /** Lightweight URL check — matches the one in CourseCreateForm. */
@@ -52,12 +61,13 @@ function validLink(value: string): boolean {
 
 function formFromCourse(course: Course | null | undefined): EditForm {
   if (!course)
-    return { title: "", description: "", duration_weeks: "", group_link: "" };
+    return { title: "", description: "", duration_weeks: "", group_link: "", status: "coming_soon" };
   return {
     title: course.title ?? "",
     description: course.description ?? "",
     duration_weeks: String(course.duration_weeks ?? ""),
     group_link: course.group_link ?? "",
+    status: course.status ?? "coming_soon",
   };
 }
 
@@ -118,7 +128,7 @@ export default function CourseFormDialog({
       description: form.description.trim(),
       duration_weeks: Number(form.duration_weeks),
       certificates,
-      is_active: course.is_active,
+      status: form.status,
       group_link: form.group_link.trim(),
       ...(imageFile ? { image: imageFile } : {}),
     };
@@ -210,6 +220,27 @@ export default function CourseFormDialog({
             <p className="text-xs text-muted-foreground">
               Where your students connect — WhatsApp, Telegram, Discord, or any
               other social/community link. Leave empty to clear.
+            </p>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={form.status}
+              onValueChange={(value) => set("status", value as CourseStatus)}
+            >
+              <SelectTrigger id="status" className="w-fit">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="coming_soon">Coming Soon</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Active = visible &amp; enrollable in the catalog · Coming Soon =
+              visible but not yet open for enrollment · Inactive = hidden.
             </p>
           </div>
 

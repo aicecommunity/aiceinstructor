@@ -38,6 +38,17 @@ export const curriculum = {
   deleteContent: (unitId: number, contentId: number) =>
     api.delete(`/programs/units/${unitId}/content/${contentId}/`),
 
+  // POST /api/programs/units/{unit_id}/content/upload-pdf/ (multipart)
+  uploadPDF: (unitId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<{ url: string; public_id: string }>(
+      `/programs/units/${unitId}/content/upload-pdf/`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+  },
+
   // POST /api/programs/units/{unit_id}/content/{content_id}/move/
   moveContent: (unitId: number, contentId: number, direction: -1 | 1) =>
     api.post<CalendarUnitContent[]>(

@@ -11,7 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCourseStore } from "../../store/useCourseStore";
 import { formatNaira, nairaToNumber } from "@/lib/format";
-import type { CourseCertificate } from "../../types/course";
+import type { CourseCertificate, CourseStatus } from "../../types/course";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import CertificatesEditor from "./CertificatesEditor";
 import SignatureImagePicker from "../shared/SignatureImagePicker";
 
@@ -39,6 +46,7 @@ interface FormState {
   is_paid: boolean;
   price: string;
   group_link: string;
+  status: CourseStatus;
 }
 
 const emptyForm: FormState = {
@@ -49,6 +57,7 @@ const emptyForm: FormState = {
   is_paid: false,
   price: "",
   group_link: "",
+  status: "coming_soon",
 };
 
 interface FieldErrors {
@@ -230,7 +239,7 @@ export default function CourseCreateForm() {
       description: form.description.trim(),
       duration_weeks: Number(form.duration_weeks),
       certificates,
-      is_active: true,
+      status: form.status,
       image: imageFile,
       group_link: form.group_link.trim(),
       is_paid: form.is_paid,
@@ -382,6 +391,27 @@ export default function CourseCreateForm() {
           {visibleErrors.group_link && (
             <p className="text-xs text-red-600">{visibleErrors.group_link}</p>
           )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Status</Label>
+          <Select
+            value={form.status}
+            onValueChange={(value) => set("status", value as CourseStatus)}
+          >
+            <SelectTrigger className="w-fit">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="coming_soon">Coming Soon</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Active = visible &amp; enrollable in the catalog · Coming Soon =
+            visible but not yet open for enrollment · Inactive = hidden.
+          </p>
         </div>
 
         <div className="grid gap-2">

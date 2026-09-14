@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   BookOpen,
+  ChartPie,
   ClipboardList,
   FileStack,
   GraduationCap,
+  Landmark,
   ListChecks,
   Library,
   MessageSquare,
@@ -102,6 +104,19 @@ const GROUPS: NavGroup[] = [
     title: "Learners",
     items: [
       { href: "/records", label: "Students & Records", icon: GraduationCap, match: (p) => p.startsWith("/records") },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      { href: "/finance", label: "Finance", icon: Landmark, match: (p) => p === "/finance" },
+      {
+        href: "/finance/analysis",
+        label: "Financial Analysis",
+        icon: ChartPie,
+        match: (p) => p.startsWith("/finance/analysis"),
+        superuserOnly: true,
+      },
     ],
   },
 ];

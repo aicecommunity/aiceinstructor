@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Dialog,
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUnitStore } from "../../store/useUnitStore";
+import { curriculum } from "../../services/curriculum";
 import type {
   CalendarUnitContent,
   CalendarUnitContentPayload,
@@ -42,6 +43,8 @@ const TYPES: { value: ContentType; label: string }[] = [
   { value: "link", label: "External Link" },
 ];
 
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
+
 export default function ContentFormDialog({
   open,
   onOpenChange,
@@ -56,7 +59,11 @@ export default function ContentFormDialog({
     url: content?.url ?? "",
     description: content?.description ?? "",
   }));
+  const [pdfFileName, setPdfFileName] = useState("");
+  const [isUploadingPDF, setIsUploadingPDF] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(content);
+  const isPdfType = form.content_type === "pdf";
 
   useEffect(() => {
     clearContentSaveError();
@@ -67,16 +74,48 @@ export default function ContentFormDialog({
         url: content?.url ?? "",
         description: content?.description ?? "",
       });
+      setPdfFileName("");
     }
   }, [open, content, clearContentSaveError]);
 
   const set = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  const handlePDFChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please choose a PDF file.");
+      return;
+    }
+    if (file.size > MAX_PDF_BYTES) {
+      toast.error("PDF file must not exceed 10 MB.");
+      return;
+    }
+
+    setIsUploadingPDF(true);
+    try {
+      const { data } = await curriculum.uploadPDF(unitId, file);
+      setForm((f) => ({ ...f, url: data.url }));
+      setPdfFileName(file.name);
+      toast.success("PDF uploaded");
+    } catch {
+      toast.error("Failed to upload PDF. Please try again.");
+    } finally {
+      setIsUploadingPDF(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.content_type) {
       toast.error("Please select a content type.");
+      return;
+    }
+    if (isPdfType && !form.url) {
+      toast.error("Please upload a PDF document first.");
       return;
     }
     const payload: CalendarUnitContentPayload = {
@@ -136,17 +175,57 @@ export default function ContentFormDialog({
               placeholder="e.g. Intro to JavaScript"
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="content-url">URL *</Label>
-            <Input
-              id="content-url"
-              type="url"
-              value={form.url}
-              onChange={(e) => set("url", e.target.value)}
-              required
-              placeholder="https://..."
-            />
-          </div>
+          {isPdfType ? (
+            <div className="grid gap-2">
+              <Label>PDF Document *</Label>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={handlePDFChange}
+                disabled={isUploadingPDF}
+              />
+              {isUploadingPDF ? (
+                <p className="text-sm text-muted-foreground">Uploading PDF...</p>
+              ) : pdfFileName ? (
+                <p className="text-sm text-green-600">
+                  Uploaded: {pdfFileName}
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 px-2 text-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Replace
+                  </Button>
+                </p>
+              ) : form.url ? (
+                <p className="text-sm text-green-600">
+                  Existing PDF attached
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 px-2 text-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Replace
+                  </Button>
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              <Label htmlFor="content-url">URL *</Label>
+              <Input
+                id="content-url"
+                type="url"
+                value={form.url}
+                onChange={(e) => set("url", e.target.value)}
+                required
+                placeholder="https://..."
+              />
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="content-description">Description</Label>
             <Textarea

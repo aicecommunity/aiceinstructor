@@ -58,7 +58,7 @@ interface CertificateState {
   deleteTemplate: (id: number) => Promise<boolean>;
   clearTemplateSaveError: () => void;
 
-  assignSignatories: (courseId: number, assignments: SignatoryAssignment[], signatureType: CertificateTemplateType) => Promise<CertificateCourse | null>;
+  assignSignatories: (courseId: number, definitionIndex: number, assignments: SignatoryAssignment[], signatureType: CertificateTemplateType) => Promise<CertificateCourse | null>;
 }
 
 export const useCertificateStore = create<CertificateState>((set) => ({
@@ -170,10 +170,10 @@ export const useCertificateStore = create<CertificateState>((set) => ({
 
   clearTemplateSaveError: () => set({ templateSaveError: null }),
 
-  assignSignatories: async (courseId: number, assignments: SignatoryAssignment[], signatureType: CertificateTemplateType) => {
+  assignSignatories: async (courseId: number, definitionIndex: number, assignments: SignatoryAssignment[], signatureType: CertificateTemplateType) => {
     set({ isAssigning: true, assigningError: null });
     try {
-      const { data } = await certificatesService.assignSignatories(courseId, {
+      const { data } = await certificatesService.assignSignatories(courseId, definitionIndex, {
         signature_type: signatureType,
         signatories: assignments,
       });

@@ -19,6 +19,8 @@ import { useCourseStore } from "../../store/useCourseStore";
 import type { Course } from "../../types/course";
 import CourseFormDialog from "./CourseFormDialog";
 import InstructorByline from "./InstructorByline";
+import CertificatePreviewLinks from "./CertificatePreviewLinks";
+import CoursePreviewButton from "./CoursePreviewButton";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -139,8 +141,12 @@ export default function CoursesManager() {
                       {course.duration_weeks} wk
                     </TableCell>
                     <TableCell>
-                      {course.is_active ? (
+                      {course.status === "active" ? (
                         <Badge>Active</Badge>
+                      ) : course.status === "coming_soon" ? (
+                        <Badge className="bg-amber-400 text-black hover:bg-amber-500">
+                          Coming Soon
+                        </Badge>
                       ) : (
                         <Badge variant="secondary">Inactive</Badge>
                       )}
@@ -203,6 +209,16 @@ export default function CoursesManager() {
                           <p className="text-sm text-muted-foreground">
                             {course.description || "No description."}
                           </p>
+                          <div className="flex flex-wrap items-center gap-2 rounded-md border p-4">
+                            <CoursePreviewButton course={course} />
+                            <span className="text-sm text-muted-foreground">
+                              Opens the course in the learn app exactly as an
+                              enrolled learner sees it — every unit unlocked,
+                              quizzes and practicals scored but{" "}
+                              <strong>not saved</strong>.
+                            </span>
+                          </div>
+                          <CertificatePreviewLinks course={course} />
                           <InstructorByline course={course} />
                         </div>
                       </TableCell>

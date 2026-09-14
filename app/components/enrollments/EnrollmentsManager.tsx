@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Info } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronRight, Info, Loader2 } from "lucide-react";
 import { useEnrollmentStore } from "../../store/useEnrollmentStore";
+import { enrollments as enrollmentsApi } from "../../services/enrollments";
+import type { Enrollment, EnrollmentStats } from "../../types/enrollment";
 import {
   Select,
   SelectContent,
@@ -20,7 +22,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/format";
-import type { Enrollment } from "../../types/enrollment";
 import LoadingState from "../state/LoadingState";
 import ErrorState from "../state/ErrorState";
 
@@ -38,9 +39,72 @@ export default function EnrollmentsManager({ onSelect, selectedId }: Props) {
   const sharedSelect = useEnrollmentStore((s) => s.selectEnrollment);
   const [courseFilter, setCourseFilter] = useState<string>("all");
 
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [statsMap, setStatsMap] = useState<Record<number, EnrollmentStats>>({});
+  const [statsLoading, setStatsLoading] = useState<Record<number, boolean>>({});
+  const [statsError, setStatsError] = useState<Record<number, string>>({});
+
   useEffect(() => {
     fetchEnrollments();
   }, [fetchEnrollments]);
+
+  // Preload stats for every row so the "Enrolled" column is populated without
+  // expanding each one. fetchStats caches into statsMap, so expands are instant.
+  useEffect(() => {
+    if (enrollments.length === 0) return;
+    enrollments.forEach((enrollment) => {
+      if (!statsMap[enrollment.id] && !statsLoading[enrollment.id]) {
+        fetchStats(enrollment.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrollments]);
+
+  const fetchStats = useCallback(
+    (enrollmentId: number) => {
+      setStatsLoading((l) => ({ ...l, [enrollmentId]: true }));
+      enrollmentsApi
+        .stats(enrollmentId)
+        .then((res) => {
+          setStatsMap((m) => ({ ...m, [enrollmentId]: res.data }));
+          setStatsError((e) => {
+            const next = { ...e };
+            delete next[enrollmentId];
+            return next;
+          });
+        })
+        .catch((err) => {
+          setStatsError((e) => ({
+            ...e,
+            [enrollmentId]:
+              err?.response?.data?.detail ?? err?.message ?? "Failed to load stats.",
+          }));
+        })
+        .finally(() => {
+          setStatsLoading((l) => {
+            const next = { ...l };
+            delete next[enrollmentId];
+            return next;
+          });
+        });
+    },
+    []
+  );
+
+  const toggleDetails = (enrollmentId: number) => {
+    if (expandedIds.has(enrollmentId)) {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(enrollmentId);
+        return next;
+      });
+      return;
+    }
+    setExpandedIds((prev) => new Set(prev).add(enrollmentId));
+    if (!statsMap[enrollmentId] && !statsLoading[enrollmentId]) {
+      fetchStats(enrollmentId);
+    }
+  };
 
   const courses = useMemo(() => {
     const map = new Map<number, string>();
@@ -104,11 +168,11 @@ export default function EnrollmentsManager({ onSelect, selectedId }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead>Course title</TableHead>
-              <TableHead>Enrollment ID</TableHead>
+              <TableHead>Enrolled</TableHead>
               <TableHead>Active</TableHead>
               <TableHead>Paid</TableHead>
               <TableHead>Price</TableHead>
-              <TableHead>Order</TableHead>
+              <TableHead>Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -121,45 +185,120 @@ export default function EnrollmentsManager({ onSelect, selectedId }: Props) {
             ) : (
               filtered.map((enrollment) => {
                 const selected = (selectedId ?? sharedSelectedId) === enrollment.id;
+                const expanded = expandedIds.has(enrollment.id);
+                const stats = statsMap[enrollment.id];
                 return (
-                  <TableRow
-                    key={enrollment.id}
-                    className={onSelect ? "cursor-pointer" : undefined}
-                    onClick={() => {
-                      sharedSelect(enrollment.id);
-                      onSelect?.(enrollment);
-                    }}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {selected && <Badge>Picked</Badge>}
-                        {enrollment.course.title}
-                      </div>
-                    </TableCell>
-                    <TableCell>#{enrollment.id}</TableCell>
-                    <TableCell>
-                      {enrollment.is_active ? (
-                        <Badge>Active</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inactive</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {enrollment.is_paid ? (
-                        <Badge variant="outline">Paid</Badge>
-                      ) : (
-                        <Badge variant="secondary">Free</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {enrollment.is_paid ? (
-                        formatPrice(enrollment.price, enrollment.currency)
-                      ) : (
-                        "Free"
-                      )}
-                    </TableCell>
-                    <TableCell>{enrollment.order ?? "—"}</TableCell>
-                  </TableRow>
+                  <Fragment key={enrollment.id}>
+                    <TableRow
+                      className={onSelect ? "cursor-pointer" : undefined}
+                      onClick={() => {
+                        sharedSelect(enrollment.id);
+                        onSelect?.(enrollment);
+                      }}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {selected && <Badge>Picked</Badge>}
+                          {enrollment.course.title}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {stats ? (
+                          <span className="font-medium tabular-nums">{stats.total_enrolled}</span>
+                        ) : statsError[enrollment.id] ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : statsLoading[enrollment.id] ? (
+                          <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {enrollment.is_active ? (
+                          <Badge>Active</Badge>
+                        ) : (
+                          <Badge variant="secondary">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {enrollment.is_paid ? (
+                          <Badge variant="outline">Paid</Badge>
+                        ) : (
+                          <Badge variant="secondary">Free</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {enrollment.is_paid ? (
+                          formatPrice(enrollment.price, enrollment.currency)
+                        ) : (
+                          "Free"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleDetails(enrollment.id);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted"
+                        >
+                          Details
+                          <ChevronRight
+                            className={`size-3.5 transition-transform ${
+                              expanded ? "rotate-90" : ""
+                            }`}
+                          />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                    {expanded && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="border-t-0 bg-muted/40 p-4">
+                          {statsLoading[enrollment.id] ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="size-4 animate-spin" />
+                              Loading stats…
+                            </div>
+                          ) : statsError[enrollment.id] ? (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-destructive">
+                                {statsError[enrollment.id]}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => fetchStats(enrollment.id)}
+                                className="text-xs font-medium text-blue-600 underline"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          ) : stats ? (
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                              {[
+                                { label: "Enrolled", value: stats.total_enrolled, tone: "text-muted-foreground" },
+                                { label: "Still learning", value: stats.learning, tone: "text-blue-600" },
+                                { label: "Completed", value: stats.completed, tone: "text-green-600" },
+                                { label: "Failed", value: stats.failed, tone: "text-red-600" },
+                              ].map((item) => (
+                                <div
+                                  key={item.label}
+                                  className="rounded-lg border border-border bg-background p-3"
+                                >
+                                  <div className="text-xs text-muted-foreground">
+                                    {item.label}
+                                  </div>
+                                  <div className={`mt-1 text-2xl font-semibold ${item.tone}`}>
+                                    {item.value}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 );
               })
             )}

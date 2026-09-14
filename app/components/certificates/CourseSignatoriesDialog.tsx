@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCertificateStore } from "../../store/useCertificateStore";
 import type {
   CertificateCourse,
+  CertificateDefinitionAssignment,
   CertificateTemplateType,
   SignatoryAssignment,
 } from "../../types/certificates";
@@ -24,22 +25,23 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   course: CertificateCourse | null;
+  definition: CertificateDefinitionAssignment | null;
 }
 
 function layoutLabel(signatureType: CertificateTemplateType): string {
   return signatureType === "2" ? "2 signatures" : "3 signatures";
 }
 
-export default function CourseSignatoriesDialog({ open, onOpenChange, course }: Props) {
+export default function CourseSignatoriesDialog({ open, onOpenChange, course, definition }: Props) {
   const { signatories, templates, isAssigning, assigningError, assignSignatories } =
     useCertificateStore();
 
-  // The dialog is remounted per course (see `key` in CoursesSection), so the
-  // state below always initializes fresh for the course being edited.
+  // The dialog is remounted per definition (see `key` in CoursesSection), so the
+  // state below always initializes fresh for the definition being edited.
   const [step, setStep] = useState<"layout" | "signatories">("layout");
-  const [layoutId, setLayoutId] = useState<number | null>(course?.layout?.id ?? null);
+  const [layoutId, setLayoutId] = useState<number | null>(definition?.layout?.id ?? null);
   const [assignments, setAssignments] = useState<SignatoryAssignment[]>(
-    course ? course.signatories.map((s) => ({ id: s.id, order: s.order })) : [],
+    definition ? definition.signatories.map((s) => ({ id: s.id, order: s.order })) : [],
   );
 
   // Layouts are offered straight from the uploaded templates ("signature layout"
@@ -90,7 +92,7 @@ export default function CourseSignatoriesDialog({ open, onOpenChange, course }: 
   };
 
   const handleSave = async () => {
-    if (!course || !selectedLayout) return;
+    if (!course || !definition || !selectedLayout) return;
     if (assignments.length !== required) {
       toast.error(
         `You must choose exactly ${required} signatures for this layout — you currently have ${assignments.length}.`,
@@ -100,6 +102,7 @@ export default function CourseSignatoriesDialog({ open, onOpenChange, course }: 
     const sorted = [...assignments].sort((a, b) => a.order - b.order);
     const updated = await assignSignatories(
       course.id,
+      definition.definition_index,
       sorted,
       selectedLayout.signature_type,
     );
@@ -109,7 +112,7 @@ export default function CourseSignatoriesDialog({ open, onOpenChange, course }: 
   };
 
   const assignedLabel = (id: number): string => {
-    const prev = course?.signatories.find((s) => s.id === id);
+    const prev = definition?.signatories.find((s) => s.id === id);
     return prev ? prev.name : selectable.find((s) => s.id === id)?.name ?? `#${id}`;
   };
 
@@ -117,7 +120,9 @@ export default function CourseSignatoriesDialog({ open, onOpenChange, course }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Signatories — {course?.title}</DialogTitle>
+          <DialogTitle>
+            Signatories — {definition?.name ?? course?.title}
+          </DialogTitle>
           <DialogDescription>
             First pick the certificate layout (two or three signatures), then choose
             exactly that many signatories.

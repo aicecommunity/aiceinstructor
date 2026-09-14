@@ -29,13 +29,28 @@ export interface CertificateCourseLayout {
   image_url: string | null;
 }
 
+// One credential a course awards, with its own layout + signatories.
+// definition_index mirrors the credential's position in the course's
+// certificates JSON array.
+export interface CertificateDefinitionAssignment {
+  definition_index: number;
+  name: string;
+  skills: string[];
+  layout: CertificateCourseLayout | null;
+  signatories: CertificateCourseSignatory[];
+}
+
 export interface CertificateCourse {
   id: number;
   title: string;
   slug: string;
   certificate_name: string;
+  skills?: string[];
   layout: CertificateCourseLayout | null;
   signatories: CertificateCourseSignatory[];
+  // Every certificate the course awards, each with its own assignable
+  // layout + signatories (per-definition, falling back to the course default).
+  certificates: CertificateDefinitionAssignment[];
 }
 
 // Body of PUT /api/certificates/courses/{id}/signatories/

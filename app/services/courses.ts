@@ -24,7 +24,7 @@ export function courseToFormData(payload: CoursePayload): FormData {
   fd.append("description", payload.description);
   fd.append("duration_weeks", String(payload.duration_weeks));
   fd.append("certificates", JSON.stringify(payload.certificates));
-  fd.append("is_active", String(payload.is_active));
+  fd.append("status", payload.status);
   if (payload.is_paid != null) fd.append("is_paid", String(payload.is_paid));
   if (payload.price != null) fd.append("price", String(payload.price));
   if (payload.currency) fd.append("currency", payload.currency);
